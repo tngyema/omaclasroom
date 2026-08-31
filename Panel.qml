@@ -230,9 +230,15 @@ Panel {
     var ampm = hours >= 12 ? "PM" : "AM"
     var h12 = hours % 12 || 12
     var minStr = minutes < 10 ? "0" + minutes : String(minutes)
-    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""
-    var tzShort = tz.split("/").pop().replace(/_/g, " ")
-    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm + " " + tzShort
+    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm
+  }
+
+  function getTimezone() {
+    var off = -new Date().getTimezoneOffset()
+    var h = Math.floor(Math.abs(off) / 60)
+    var m = Math.abs(off) % 60
+    var sign = off >= 0 ? "+" : "-"
+    return "UTC" + sign + h + (m > 0 ? ":" + (m < 10 ? "0" : "") + m : "")
   }
 
   function grade(course) {
@@ -435,7 +441,7 @@ Panel {
               }
               Text {
                 width: parent.width
-                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.upcomingCount + " upcoming | " + root.submittedCount + " done | " + Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")
+                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.upcomingCount + " upcoming | " + root.submittedCount + " done | " + root.getTimezone()
                 color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
