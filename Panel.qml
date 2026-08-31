@@ -69,6 +69,18 @@ Panel {
   readonly property int submittedCount: allSubmitted.length
   readonly property int upcomingCount: allUpcoming.length
   readonly property int totalCount: assignments.length
+  readonly property int urgentCount: {
+    var count = 0
+    var nowMs = now.getTime()
+    for (var i = 0; i < assignments.length; i++) {
+      if (assignments[i].submitted) continue
+      var due = new Date(assignments[i].due_at).getTime()
+      if (!isFinite(due)) continue
+      var diff = due - nowMs
+      if (diff > 0 && diff <= 86400000) count++
+    }
+    return count
+  }
 
   function countByStatusForCourse(courseId, status) {
     var count = 0
@@ -299,8 +311,9 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     text: "\uf19c"
-    active: root.errorText !== "" || root.missingCount > 0 || root.dueSoonCount > 0
+    active: root.errorText !== "" || root.missingCount > 0 || root.urgentCount > 0
     tooltipText: root.errorText !== "" ? "Omaclasroom -- " + root.errorText
+      : root.urgentCount > 0 ? "REMINDER: " + root.urgentCount + " assignment(s) due within 1 day!"
       : "Omaclasroom -- " + root.dueSoonCount + " due, " + root.missingCount + " missing, " + root.submittedCount + " done"
     onPressed: function(btn) {
       if (btn === Qt.RightButton) root.refreshNow()
@@ -346,7 +359,6 @@ Panel {
         boundsBehavior: Flickable.StopAtBounds
         flickableDirection: Flickable.VerticalFlick
         interactive: contentHeight > height
-      }
 
         Column {
           id: content
@@ -464,6 +476,60 @@ Panel {
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
+          }
+
+          // REMINDER BANNER
+          Column {
+            visible: root.urgentCount > 0 && root.selectedPane === 0 && root.errorText === ""
+            width: parent.width
+            spacing: 4
+            Rectangle {
+              width: parent.width
+              height: urgentCol.implicitHeight + 12
+              radius: 4
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+              border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.2)
+              border.width: 1
+              Column {
+                id: urgentCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 8
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+                Text {
+                  text: "REMINDER"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  font.letterSpacing: 1.2
+                }
+                Repeater {
+                  model: {
+                    var items = []
+                    var nowMs = root.now.getTime()
+                    for (var i = 0; i < root.assignments.length; i++) {
+                      var a = root.assignments[i]
+                      if (a.submitted) continue
+                      var due = new Date(a.due_at).getTime()
+                      if (!isFinite(due)) continue
+                      var diff = due - nowMs
+                      if (diff > 0 && diff <= 86400000) items.push(a)
+                    }
+                    return items
+                  }
+                  Text {
+                    text: modelData.name + " — " + root.timeLeft(modelData.due_at) + " left"
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    wrapMode: Text.WordWrap
+                    width: parent.width
+                  }
+                }
+              }
+            }
           }
 
           // ==================== OVERVIEW ====================
