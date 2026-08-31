@@ -442,6 +442,32 @@ class ClassroomClient:
                 break
         return submitted
 
+    def list_my_submissions(self, course_id: str) -> dict[str, str]:
+        """List the current user's submission states for a course.
+
+        Returns a mapping of courseWorkId -> state (e.g. TURNED_IN, CREATED).
+        """
+        states: dict[str, str] = {}
+        page_token = None
+        while True:
+            params: dict[str, Any] = {"userId": "me", "pageSize": 100}
+            if page_token:
+                params["pageToken"] = page_token
+            data = self._get(
+                f"{CLASSROOM_BASE}/v1/courses/{course_id}/courseWork"
+                f"/-/studentSubmissions",
+                params,
+            )
+            for sub in data.get("studentSubmissions", []):
+                work_id = sub.get("courseWorkId", "")
+                state = sub.get("state", "UNKNOWN")
+                if work_id:
+                    states[work_id] = state
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+        return states
+
     def get_or_create_submission(
         self, course_id: str, course_work_id: str,
     ) -> dict[str, Any]:
@@ -585,21 +611,28 @@ def collect_student(
             })
             continue
         work_items = client.list_course_work(course_id)
+        submission_states = client.list_my_submissions(course_id)
         upcoming = []
         for work in work_items:
             due = parse_time(work.get("dueDate"))
+            work_id = work.get("id", "")
+            state = submission_states.get(work_id, "UNKNOWN")
+            is_submitted = state in ("TURNED_IN", "RETURNED")
             if due is None:
                 continue
             cutoff = now + timedelta(days=days)
-            is_missing = due < now
+            is_missing = due < now and not is_submitted
             is_in_range = now <= due <= cutoff
-            if not is_missing and not is_in_range:
+            if not is_missing and not is_in_range and not is_submitted:
+                continue
+            if due < now and is_submitted:
                 continue
             upcoming.append({
-                "id": work.get("id"),
+                "id": work_id,
                 "name": sanitize_text(work.get("title"), "Untitled"),
                 "due_at": due.isoformat(),
-                "submitted": False,
+                "submitted": is_submitted,
+                "state": state,
                 "published": True,
                 "locked": False,
                 "missing": is_missing,
