@@ -624,8 +624,6 @@ def collect_student(
             is_in_range = now <= due <= cutoff
             if not is_missing and not is_in_range and not is_submitted:
                 continue
-            if due < now and is_submitted:
-                continue
             upcoming.append({
                 "id": work_id,
                 "name": sanitize_text(work.get("title"), "Untitled"),
