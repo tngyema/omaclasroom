@@ -579,6 +579,11 @@ Panel {
               }
               Column {
                 spacing: 2
+                Text { text: String(root.upcomingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { text: "Upcoming"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              }
+              Column {
+                spacing: 2
                 Text { text: String(root.missingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
                 Text { text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
@@ -586,11 +591,6 @@ Panel {
                 spacing: 2
                 Text { text: String(root.submittedCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
                 Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-              }
-              Column {
-                spacing: 2
-                Text { text: String(root.upcomingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Text { text: "Upcoming"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
             }
 
