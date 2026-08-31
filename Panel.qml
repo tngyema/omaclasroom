@@ -346,19 +346,7 @@ Panel {
         boundsBehavior: Flickable.StopAtBounds
         flickableDirection: Flickable.VerticalFlick
         interactive: contentHeight > height
-        contentY: 0
-        Behavior on contentY { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-        ScrollBar.vertical: ScrollBar {
-          policy: ScrollBar.AsNeeded
-          contentItem: Rectangle {
-            implicitWidth: 3
-            radius: 1.5
-            color: root.foreground
-            opacity: parent.active ? 0.6 : 0.2
-            Behavior on opacity { NumberAnimation { duration: 200 } }
-          }
-          background: Item {}
-        }
+      }
 
         Column {
           id: content
