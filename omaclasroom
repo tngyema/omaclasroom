@@ -449,9 +449,10 @@ def collect_student(
             if due is None:
                 continue
             cutoff = now + timedelta(days=days)
-            if not now <= due <= cutoff:
+            is_missing = due < now
+            is_in_range = now <= due <= cutoff
+            if not is_missing and not is_in_range:
                 continue
-            submitted = work.get("alternateLink", "") != ""
             upcoming.append({
                 "id": work.get("id"),
                 "name": sanitize_text(work.get("title"), "Untitled"),
@@ -459,6 +460,7 @@ def collect_student(
                 "submitted": False,
                 "published": True,
                 "locked": False,
+                "missing": is_missing,
                 "alternateLink": sanitize_classroom_link(work.get("alternateLink")) or "",
                 "courseworkType": sanitize_text(work.get("workType")),
             })
