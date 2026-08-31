@@ -222,15 +222,15 @@ Panel {
     if (!isFinite(d.getTime())) return "No due date"
     var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    var day = days[d.getUTCDay()]
-    var month = months[d.getUTCMonth()]
-    var date = d.getUTCDate()
-    var hours = d.getUTCHours()
-    var minutes = d.getUTCMinutes()
+    var day = days[d.getDay()]
+    var month = months[d.getMonth()]
+    var date = d.getDate()
+    var hours = d.getHours()
+    var minutes = d.getMinutes()
     var ampm = hours >= 12 ? "PM" : "AM"
     var h12 = hours % 12 || 12
     var minStr = minutes < 10 ? "0" + minutes : String(minutes)
-    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm + " UTC"
+    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm
   }
 
   function grade(course) {

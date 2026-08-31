@@ -613,7 +613,13 @@ def collect_student(
         submission_states = client.list_my_submissions(course_id)
         upcoming = []
         for work in work_items:
-            due = parse_time(work.get("dueDate"))
+            due_date = work.get("dueDate")
+            due_time = work.get("dueTime")
+            due = parse_time(due_date)
+            if due and due_time:
+                h = due_time.get("hours", due_time.get("hour", 0))
+                m = due_time.get("minutes", due_time.get("minute", 0))
+                due = due.replace(hour=int(h or 0), minute=int(m or 0))
             work_id = work.get("id", "")
             state = submission_states.get(work_id, "UNKNOWN")
             is_submitted = state in ("TURNED_IN", "RETURNED")
