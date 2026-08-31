@@ -275,6 +275,11 @@ class ClassroomClient:
         except (URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as error:
             raise RuntimeError(f"Could not reach Google Classroom: {error}") from error
 
+    def get_my_user_id(self) -> str:
+        """Get the authenticated user's Google Classroom user ID."""
+        data = self._get(f"{CLASSROOM_BASE}/v1/userProfiles/me")
+        return str(data.get("id", ""))
+
     def list_courses(self) -> list[dict[str, Any]]:
         """List active courses for the authenticated user."""
         courses: list[dict[str, Any]] = []
@@ -380,6 +385,19 @@ class ClassroomClient:
 
 
 def parse_time(value: Any) -> datetime | None:
+    if isinstance(value, dict):
+        year = value.get("year")
+        month = value.get("month", 1)
+        day = value.get("day", 1)
+        hour = value.get("hour", 0)
+        minute = value.get("minute", 0)
+        if year and month and day:
+            try:
+                return datetime(int(year), int(month), int(day),
+                                int(hour), int(minute), tzinfo=timezone.utc)
+            except (TypeError, ValueError):
+                return None
+        return None
     if not isinstance(value, str) or not value:
         return None
     try:
@@ -548,19 +566,10 @@ def collect(
     if all_courses is None:
         all_courses = client.list_courses()
     if not my_user_id:
-        for course in all_courses:
-            course_id = str(course.get("id", ""))
-            try:
-                teachers = client.list_teachers(course_id)
-                for teacher in teachers:
-                    uid = teacher.get("userId", "")
-                    if uid:
-                        my_user_id = uid
-                        break
-            except ClassroomPermissionError:
-                pass
-            if my_user_id:
-                break
+        try:
+            my_user_id = client.get_my_user_id()
+        except (ClassroomPermissionError, ClassroomAuthenticationError, RuntimeError):
+            my_user_id = ""
     teacher_course_ids: set[str] = set()
     for course in all_courses:
         course_id = str(course.get("id", ""))
