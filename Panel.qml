@@ -203,7 +203,7 @@ Panel {
     var due = new Date(dueAt).getTime()
     if (!isFinite(due)) return ""
     var diff = due - now.getTime()
-    var suffix = diff < 0 ? " overdue" : ""
+    var suffix = diff < 0 ? " overdue" : " left"
     var past = Math.abs(diff)
     var days = Math.floor(past / 86400000)
     var hours = Math.floor((past % 86400000) / 3600000)
@@ -220,7 +220,17 @@ Panel {
   function dueLabel(dueAt) {
     var d = new Date(dueAt)
     if (!isFinite(d.getTime())) return "No due date"
-    return d.toLocaleString(Qt.locale(), "ddd MMM d, h:mm AP")
+    var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    var day = days[d.getUTCDay()]
+    var month = months[d.getUTCMonth()]
+    var date = d.getUTCDate()
+    var hours = d.getUTCHours()
+    var minutes = d.getUTCMinutes()
+    var ampm = hours >= 12 ? "PM" : "AM"
+    var h12 = hours % 12 || 12
+    var minStr = minutes < 10 ? "0" + minutes : String(minutes)
+    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm + " UTC"
   }
 
   function grade(course) {
