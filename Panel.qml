@@ -230,7 +230,9 @@ Panel {
     var ampm = hours >= 12 ? "PM" : "AM"
     var h12 = hours % 12 || 12
     var minStr = minutes < 10 ? "0" + minutes : String(minutes)
-    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+    var tzShort = tz.split("/").pop().replace(/_/g, " ")
+    return day + " " + month + " " + date + ", " + h12 + ":" + minStr + " " + ampm + " " + tzShort
   }
 
   function grade(course) {
@@ -433,7 +435,7 @@ Panel {
               }
               Text {
                 width: parent.width
-                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.submittedCount + " done"
+                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.submittedCount + " done | " + Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")
                 color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
