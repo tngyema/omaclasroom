@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""One-command setup for Omaclasroom. Handles Google Cloud project creation,
-OAuth credential setup, and token storage."""
+"""Omaclasroom setup — simple OAuth flow. No gcloud required."""
 
 import http.server
 import json
@@ -10,7 +9,6 @@ import sys
 import webbrowser
 from urllib.parse import urlencode, urlparse, parse_qs
 from urllib.request import Request, build_opener
-
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -23,86 +21,53 @@ SCOPES = [
     "https://www.googleapis.com/auth/classroom.rosters.readonly",
 ]
 
-
-def step1_authenticate_gcloud():
-    """Step 1: Authenticate gcloud CLI."""
-    print("\n=== Step 1: Sign in to Google Cloud ===")
-    print("A browser window will open. Sign in with your school email.\n")
-    subprocess.run(["gcloud", "auth", "login"], check=True)
-    print("Signed in successfully!\n")
+CONFIG_DIR = os.path.expanduser("~/.config/omarchy/plugins/io.github.omaclasroom")
+CREDENTIALS_FILE = os.path.join(CONFIG_DIR, "credentials.json")
 
 
-def step2_create_project(project_id):
-    """Step 2: Create Google Cloud project."""
-    print(f"\n=== Step 2: Creating project '{project_id}' ===")
-    result = subprocess.run(
-        ["gcloud", "projects", "create", project_id, "--name=omaclasroom"],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0 and "already exists" not in result.stderr.lower():
-        print(f"Warning: {result.stderr.strip()}")
-    subprocess.run(
-        ["gcloud", "config", "set", "project", project_id],
-        check=True, capture_output=True,
-    )
-    print(f"Project '{project_id}' ready!\n")
+def check_existing():
+    """Check if already set up."""
+    if os.path.exists(CREDENTIALS_FILE):
+        try:
+            with open(CREDENTIALS_FILE) as f:
+                data = json.load(f)
+            if data.get("refresh_token"):
+                print("\nOmaclasroom is already configured!")
+                print("To reconfigure, run: omaclasroom-setup --clear")
+                return True
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return False
 
 
-def step3_enable_api():
-    """Step 3: Enable Classroom API."""
-    print("\n=== Step 3: Enabling Google Classroom API ===")
-    subprocess.run(
-        ["gcloud", "services", "enable", "classroom.googleapis.com"],
-        check=True, capture_output=True,
-    )
-    print("Google Classroom API enabled!\n")
+def get_credentials():
+    """Get or create OAuth credentials."""
+    if os.path.exists(CREDENTIALS_FILE):
+        with open(CREDENTIALS_FILE) as f:
+            data = json.load(f)
+        if data.get("client_id") and data.get("client_secret"):
+            return data["client_id"], data["client_secret"]
 
+    print("\nYou need a Google Cloud project with Classroom API enabled.")
+    print("If you don't have one, create it at: https://console.cloud.google.com")
+    print("Then enable the Classroom API.\n")
 
-def step4_create_oauth_credentials():
-    """Step 4: Create OAuth2 credentials via OAuth Consent Screen + Credentials."""
-    print("\n=== Step 4: Creating OAuth2 credentials ===")
+    print("Enter your OAuth2 credentials:")
+    print("(Create at: https://console.cloud.google.com/apis/credentials)")
+    print("  Application type: Desktop app\n")
 
-    # Configure consent screen
-    print("Configuring consent screen...")
-    subprocess.run([
-        "gcloud", "iap", "web", "oauth-clients", "create",
-        "--display_name=omaclasroom",
-    ], capture_output=True, text=True)
+    client_id = input("Client ID: ").strip()
+    client_secret = input("Client Secret: ").strip()
 
-    # Try to create OAuth client via gcloud
-    result = subprocess.run([
-        "gcloud", "iap", "web", "oauth-clients", "list",
-        "--format=json",
-    ], capture_output=True, text=True)
+    if not client_id or not client_secret:
+        print("Error: Client ID and Client Secret are required.")
+        sys.exit(1)
 
-    if result.returncode == 0 and result.stdout.strip():
-        clients = json.loads(result.stdout)
-        if clients:
-            client = clients[0]
-            print(f"Found existing OAuth client: {client.get('name', 'unknown')}")
-            return client
-
-    # If that didn't work, use the projects API approach
-    print("Creating new OAuth client ID...")
-    result = subprocess.run([
-        "gcloud", "services", "enable", "oauth2.googleapis.com",
-    ], capture_output=True, text=True)
-
-    print("\nManual step needed: Creating OAuth credentials requires browser access.")
-    print("Please run these steps manually:")
-    print("  1. Go to https://console.cloud.google.com/apis/credentials")
-    print("  2. Click '+ Create Credentials → OAuth client ID'")
-    print("  3. Application type: Desktop app")
-    print("  4. Name: omaclasroom")
-    print("  5. Copy the Client ID and Client Secret\n")
-
-    return None
+    return client_id, client_secret
 
 
 def run_oauth_flow(client_id, client_secret):
-    """Step 5: Run OAuth2 flow and save token."""
-    print("\n=== Step 5: Authorization ===")
-
+    """Run OAuth2 authorization flow."""
     scope = " ".join(SCOPES)
     auth_params = urlencode({
         "client_id": client_id,
@@ -114,7 +79,7 @@ def run_oauth_flow(client_id, client_secret):
     })
     auth_url = f"{GOOGLE_AUTH_URL}?{auth_params}"
 
-    print(f"Opening browser for Google authorization...")
+    print(f"\nOpening browser for Google authorization...")
     print(f"If the browser doesn't open, visit:\n{auth_url}\n")
     webbrowser.open(auth_url)
 
@@ -170,63 +135,58 @@ def run_oauth_flow(client_id, client_secret):
         print(f"Token exchange failed: {payload.get('error', 'no refresh token')}")
         return False
 
-    # Save to keyring
-    for key, value in [("client_id", client_id), ("client_secret", client_secret),
-                        ("refresh_token", payload["refresh_token"])]:
-        subprocess.run(
-            ["secret-tool", "store", "--label", f"Omaclasroom {key}",
-             "service", "omaclasroom", "key", key],
-            input=value + "\n", text=True, check=True,
-        )
+    # Save credentials
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    credentials = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": payload["refresh_token"],
+    }
+    with open(CREDENTIALS_FILE, "w") as f:
+        json.dump(credentials, f, indent=2)
+    os.chmod(CREDENTIALS_FILE, 0o600)
 
-    print("Credentials saved to system keyring!")
+    print("Credentials saved!")
     return True
 
 
-def main():
-    print("=" * 50)
-    print("  Omaclasroom — Quick Setup")
-    print("=" * 50)
+def clear_credentials():
+    """Remove stored credentials."""
+    if os.path.exists(CREDENTIALS_FILE):
+        os.remove(CREDENTIALS_FILE)
+        print("Credentials cleared.")
+    else:
+        print("No credentials found.")
 
-    # Check if already set up
-    result = subprocess.run(
-        ["secret-tool", "lookup", "service", "omaclasroom", "key", "refresh_token"],
-        capture_output=True, text=True,
-    )
-    if result.stdout.strip():
-        print("\nOmaclasroom is already configured!")
-        print("To reconfigure, run: omaclasroom clear-token")
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--clear":
+        clear_credentials()
         return
 
-    project_id = "polished-watch-462805-e6"
+    if len(sys.argv) > 1 and sys.argv[1] == "--status":
+        if os.path.exists(CREDENTIALS_FILE):
+            print("Configured")
+        else:
+            print("Not configured")
+        return
 
-    step1_authenticate_gcloud()
-    step2_create_project(project_id)
-    step3_enable_api()
+    print("=" * 50)
+    print("  Omaclasroom Setup")
+    print("=" * 50)
 
-    client = step4_create_oauth_credentials()
+    if check_existing():
+        return
 
-    if not client:
-        print("\nWaiting for you to create OAuth credentials...")
-        print("Paste your Client ID and Client Secret below.\n")
-        client_id = input("Client ID: ").strip()
-        client_secret = input("Client Secret: ").strip()
-    else:
-        # Extract from gcloud response
-        client_id = client.get("clientId", "")
-        client_secret = client.get("secret", "")
-        if not client_id or not client_secret:
-            print("\nCouldn't extract credentials from gcloud response.")
-            client_id = input("Client ID: ").strip()
-            client_secret = input("Client Secret: ").strip()
+    client_id, client_secret = get_credentials()
 
     if run_oauth_flow(client_id, client_secret):
         print("\n" + "=" * 50)
-        print("  Setup complete! Right-click the Omaclasroom")
-        print("  bar icon to refresh and see your courses.")
+        print("  Setup complete!")
+        print("  Right-click the Omaclasroom bar icon to refresh.")
         print("=" * 50)
     else:
-        print("\nSetup failed. Try running: omaclasroom set-token")
+        print("\nSetup failed. Try running: omaclasroom-setup")
 
 
 if __name__ == "__main__":

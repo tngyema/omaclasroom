@@ -103,7 +103,8 @@ def _keyring_clear(key: str) -> None:
 
 
 def get_credentials() -> dict[str, str] | None:
-    """Retrieve stored OAuth2 credentials from the system keyring."""
+    """Retrieve stored OAuth2 credentials from keyring or file."""
+    # Try keyring first
     client_id = _keyring_lookup("client_id")
     client_secret = _keyring_lookup("client_secret")
     refresh_token = _keyring_lookup("refresh_token")
@@ -113,20 +114,50 @@ def get_credentials() -> dict[str, str] | None:
             "client_secret": client_secret,
             "refresh_token": refresh_token,
         }
+    # Try file-based credentials
+    creds_file = os.path.join(
+        os.path.dirname(__file__), "credentials.json"
+    )
+    if os.path.exists(creds_file):
+        try:
+            with open(creds_file) as f:
+                data = json.load(f)
+            if data.get("client_id") and data.get("client_secret") and data.get("refresh_token"):
+                return data
+        except (json.JSONDecodeError, KeyError):
+            pass
     return None
 
 
 def save_credentials(client_id: str, client_secret: str, refresh_token: str) -> None:
-    """Store OAuth2 credentials in the system keyring."""
+    """Store OAuth2 credentials in keyring and file."""
     _keyring_store("client_id", client_id, "Omaclasroom Client ID")
     _keyring_store("client_secret", client_secret, "Omaclasroom Client Secret")
     _keyring_store("refresh_token", refresh_token, "Omaclasroom Refresh Token")
+    # Also save to file for easier setup
+    creds_file = os.path.join(os.path.dirname(__file__), "credentials.json")
+    try:
+        with open(creds_file, "w") as f:
+            json.dump({
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+            }, f, indent=2)
+        os.chmod(creds_file, 0o600)
+    except OSError:
+        pass
 
 
 def clear_credentials() -> None:
-    """Remove stored OAuth2 credentials from the system keyring."""
+    """Remove stored OAuth2 credentials from keyring and file."""
     for key in ("client_id", "client_secret", "refresh_token"):
         _keyring_clear(key)
+    creds_file = os.path.join(os.path.dirname(__file__), "credentials.json")
+    if os.path.exists(creds_file):
+        try:
+            os.remove(creds_file)
+        except OSError:
+            pass
 
 
 def refresh_access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
@@ -898,8 +929,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "command",
-        choices=["fetch", "set-token", "clear-token", "hide-course", "unhide-course",
-                 "submit"],
+        choices=["fetch", "set-token", "clear-token", "setup",
+                 "hide-course", "unhide-course", "submit"],
     )
     parser.add_argument("course_id", nargs="?")
     parser.add_argument("--days", type=int, default=14)
@@ -914,7 +945,7 @@ def main() -> int:
                         help="Link URL to attach and submit")
     parser.add_argument("--title", default="",
                         help="Title for the attachment")
-    args = parser.parse_args()
+    args, extra_args = parser.parse_known_args()
     try:
         if args.command == "set-token":
             client_id = args.client_id or input("Google OAuth2 Client ID: ").strip()
@@ -928,6 +959,10 @@ def main() -> int:
         if args.command == "clear-token":
             clear_credentials()
             print("Google Classroom credentials removed from the system keyring.")
+            return 0
+        if args.command == "setup":
+            setup_script = os.path.join(os.path.dirname(__file__), "setup")
+            os.execv(setup_script, [setup_script] + extra_args)
             return 0
         if args.command in {"hide-course", "unhide-course"}:
             if not args.course_id:
