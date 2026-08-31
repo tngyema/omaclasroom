@@ -34,11 +34,9 @@ Panel {
     }
   })
   property string errorText: ""
-  property string submitError: ""
   property bool loading: false
   property bool refreshAfterStatus: false
   property bool submittedExpanded: false
-  property var pendingSubmitAssignment: null
 
   readonly property var studentData: payload.roles && payload.roles.student
     ? payload.roles.student : ({ available: false, error: "", courses: [], hidden_courses: [] })
@@ -70,6 +68,17 @@ Panel {
   readonly property int missingCount: allMissing.length
   readonly property int submittedCount: allSubmitted.length
   readonly property int upcomingCount: allUpcoming.length
+  readonly property int totalCount: assignments.length
+
+  function countByStatusForCourse(courseId, status) {
+    var count = 0
+    for (var i = 0; i < assignments.length; i++) {
+      if (assignments[i].course_id === courseId && getAssignmentStatus(assignments[i]) === status) {
+        count++
+      }
+    }
+    return count
+  }
 
   property var now: new Date()
   Timer { interval: 60000; running: root.opened; repeat: true; onTriggered: root.now = new Date() }
@@ -95,8 +104,9 @@ Panel {
 
   function filterByStatus(list, status) {
     var r = []
-    for (var i = 0; i < list.length; i++)
+    for (var i = 0; i < list.length; i++) {
       if (getAssignmentStatus(list[i]) === status) r.push(list[i])
+    }
     return r
   }
 
@@ -129,28 +139,32 @@ Panel {
   function selectRole(role) {
     if (role === "student" && !studentRolePresent) return
     if (role === "teacher" && !teacherRolePresent) return
-    selectedRole = role; selectedCourseId = ""
+    selectedRole = role
+    selectedCourseId = ""
     submittedExpanded = false
     ensureSelectedCourse()
     if (panelFlick) panelFlick.contentY = 0
   }
 
   function findSelectedCourse() {
-    for (var i = 0; i < courses.length; i++)
+    for (var i = 0; i < courses.length; i++) {
       if (String(courses[i].id) === selectedCourseId) return courses[i]
+    }
     return courses.length > 0 ? courses[0] : null
   }
 
   function findSelectedCourseIndex() {
-    for (var i = 0; i < courses.length; i++)
+    for (var i = 0; i < courses.length; i++) {
       if (String(courses[i].id) === selectedCourseId) return i
+    }
     return courses.length > 0 ? 0 : -1
   }
 
   function ensureSelectedCourse() {
     if (courses.length === 0) { selectedCourseId = ""; return }
-    for (var i = 0; i < courses.length; i++)
+    for (var i = 0; i < courses.length; i++) {
       if (String(courses[i].id) === selectedCourseId) return
+    }
     selectedCourseId = String(courses[0].id)
   }
 
@@ -168,25 +182,27 @@ Panel {
 
   function refreshNow() {
     if (statusProc.running) return
-    loading = true; errorText = ""; statusProc.running = true
+    loading = true
+    errorText = ""
+    statusProc.running = true
   }
 
   function timeLeft(dueAt) {
     var due = new Date(dueAt).getTime()
     if (!isFinite(due)) return ""
     var diff = due - now.getTime()
-    if (diff < 0) {
-      var past = -diff
-      var d = Math.floor(past / 86400000)
-      var h = Math.floor((past % 86400000) / 3600000)
-      return d > 0 ? d + "d " + h + "h overdue" : h + "h overdue"
-    }
-    var d = Math.floor(diff / 86400000)
-    var h = Math.floor((diff % 86400000) / 3600000)
-    var m = Math.floor((diff % 3600000) / 60000)
-    if (d > 0) return d + "d " + h + "h"
-    if (h > 0) return h + "h " + m + "m"
-    return m + "m"
+    var suffix = diff < 0 ? " overdue" : ""
+    var past = Math.abs(diff)
+    var days = Math.floor(past / 86400000)
+    var hours = Math.floor((past % 86400000) / 3600000)
+    var mins = Math.floor((past % 3600000) / 60000)
+    var secs = Math.floor((past % 60000) / 1000)
+    var parts = []
+    if (days > 0) parts.push(days + "d")
+    if (hours > 0) parts.push(hours + "h")
+    if (mins > 0) parts.push(mins + "m")
+    if (parts.length === 0) parts.push(secs + "s")
+    return parts.join(" ") + suffix
   }
 
   function dueLabel(dueAt) {
@@ -209,17 +225,22 @@ Panel {
     return "Updated " + d.toLocaleString(Qt.locale(), "h:mm AP")
   }
 
-  function elided(v, max) { var s = String(v || "").trim(); return s.length <= max ? s : s.substring(0, max - 1) + "..." }
-  function courseLabel(c, i) { var s = String(c.section || "").trim(); return s ? elided(s, 20) : elided(c.name || "Course " + (i + 1), 20) }
+  function elided(v, max) {
+    var s = String(v || "").trim()
+    return s.length <= max ? s : s.substring(0, max - 1) + "..."
+  }
+
+  function courseLabel(c, i) {
+    var s = String(c.section || "").trim()
+    return s ? elided(s, 20) : elided(c.name || "Course " + (i + 1), 20)
+  }
 
   function openLink(url) { if (url) Qt.openUrlExternally(url) }
 
   function submitAssignment(assignment) {
-    if (submitProc.running) return
-    submitError = ""; pendingSubmitAssignment = assignment
-    var cmd = [helperPath, "submit", String(assignment.course_id), "--course-work-id", String(assignment.id)]
-    if (assignment.alternateLink) cmd.push("--link-url", assignment.alternateLink)
-    submitProc.command = cmd; submitProc.running = true
+    var url = assignment.alternateLink || ""
+    if (!url) url = "https://classroom.google.com"
+    Qt.openUrlExternally(url)
   }
 
   Process {
@@ -236,30 +257,31 @@ Panel {
       try {
         var p = JSON.parse(String(statusOutput.text || ""))
         if (Number(p.schema_version) !== 1 || !p.roles) throw new Error("bad format")
-        root.payload = p; root.ensureSelectedRole(); root.ensureSelectedCourse(); root.errorText = ""
-      } catch (e) { root.errorText = "Could not parse Classroom data." }
-      if (root.refreshAfterStatus) { root.refreshAfterStatus = false; Qt.callLater(root.refreshNow) }
-    }
-  }
-
-  Process {
-    id: submitProc
-    stdout: StdioCollector { id: submitOutput; waitForEnd: true }
-    stderr: StdioCollector { id: submitErrorOut; waitForEnd: true }
-    onExited: function(exitCode) {
-      if (exitCode !== 0) {
-        root.submitError = String(submitErrorOut.text || "").trim().replace(/^omaclasroom:\s*/, "") || "Submit failed."
-      } else {
-        root.submitError = ""; root.pendingSubmitAssignment = null
+        root.payload = p
+        root.ensureSelectedRole()
+        root.ensureSelectedCourse()
+        root.errorText = ""
+      } catch (e) {
+        root.errorText = "Could not parse Classroom data."
+      }
+      if (root.refreshAfterStatus) {
+        root.refreshAfterStatus = false
         Qt.callLater(root.refreshNow)
       }
     }
   }
 
-  Timer { interval: root.refreshSec * 1000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refreshNow() }
+  Timer {
+    interval: root.refreshSec * 1000
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: root.refreshNow()
+  }
 
   onOpenedChanged: if (opened) {
-    cursorActive = false; submittedExpanded = false
+    cursorActive = false
+    submittedExpanded = false
     if (panelFlick) panelFlick.contentY = 0
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
@@ -274,23 +296,34 @@ Panel {
 
   BarIconButton {
     id: button
-    anchors.fill: parent; bar: root.bar; text: "\uf19c"
+    anchors.fill: parent
+    bar: root.bar
+    text: "\uf19c"
     active: root.errorText !== "" || root.missingCount > 0 || root.dueSoonCount > 0
     tooltipText: root.errorText !== "" ? "Omaclasroom -- " + root.errorText
       : "Omaclasroom -- " + root.dueSoonCount + " due, " + root.missingCount + " missing, " + root.submittedCount + " done"
-    onPressed: function(btn) { if (btn === Qt.RightButton) root.refreshNow(); else root.toggle() }
+    onPressed: function(btn) {
+      if (btn === Qt.RightButton) root.refreshNow()
+      else root.toggle()
+    }
   }
 
   KeyboardPanel {
-    id: panel; anchorItem: button; owner: root; bar: root.bar; open: root.opened; focusTarget: keyCatcher
+    id: panel
+    anchorItem: button
+    owner: root
+    bar: root.bar
+    open: root.opened
+    focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(480))
     contentHeight: panel.fittedContentHeight(content.implicitHeight, Style.space(720))
 
     PanelKeyCatcher {
-      id: keyCatcher; anchors.fill: parent
+      id: keyCatcher
+      anchors.fill: parent
       onMoveRequested: function(dx, dy) {
         if (dx !== 0) root.selectPane(root.selectedPane + dx)
-        if (dy !== 0) panelFlick.contentY = Math.max(0, Math.min(panelFlick.contentY + dy * Style.space(56), Math.max(0, panelFlick.contentHeight - panelFlick.height)))
+        if (dy !== 0) panelFlick.contentY = Math.max(0, Math.min(panelFlick.contentY + dy * Style.space(40), Math.max(0, panelFlick.contentHeight - panelFlick.height)))
       }
       onActivateRequested: root.refreshNow()
       onCloseRequested: root.close()
@@ -305,37 +338,120 @@ Panel {
       }
 
       Flickable {
-        id: panelFlick; anchors.fill: parent; contentWidth: width; contentHeight: content.implicitHeight
-        clip: true; boundsBehavior: Flickable.StopAtBounds; flickableDirection: Flickable.VerticalFlick
+        id: panelFlick
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: content.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.VerticalFlick
         interactive: contentHeight > height
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        contentY: 0
+        Behavior on contentY { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        ScrollBar.vertical: ScrollBar {
+          policy: ScrollBar.AsNeeded
+          contentItem: Rectangle {
+            implicitWidth: 3
+            radius: 1.5
+            color: root.foreground
+            opacity: parent.active ? 0.6 : 0.2
+            Behavior on opacity { NumberAnimation { duration: 200 } }
+          }
+          background: Item {}
+        }
 
         Column {
-          id: content; width: panelFlick.width - Style.space(8); spacing: Style.space(10); anchors.horizontalCenter: parent.horizontalCenter
+          id: content
+          width: panelFlick.width - Style.space(8)
+          spacing: Style.space(10)
+          anchors.horizontalCenter: parent.horizontalCenter
 
           // HEADER
-          Item { width: parent.width; implicitHeight: Math.max(hIcon.implicitHeight, hCol.implicitHeight)
-            Text { id: hIcon; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; text: "\uf19c"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.display }
-            Column { id: hCol; anchors.left: hIcon.right; anchors.leftMargin: Style.space(12); anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 2
-              Item { width: parent.width; implicitHeight: Math.max(hTitle.implicitHeight, roleCh.implicitHeight)
-                Text { id: hTitle; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; text: "Omaclasroom"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Item { id: roleCh; visible: root.showRoleSwitch; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                  Text { text: root.teaching ? "TEACHING" : "STUDENT"; color: rArea.containsMouse ? root.urgent : root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.0 }
-                  MouseArea { id: rArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.selectRole(root.teaching ? "student" : "teacher") }
+          Item {
+            width: parent.width
+            implicitHeight: Math.max(hIcon.implicitHeight, hCol.implicitHeight)
+            Text {
+              id: hIcon
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              text: "\uf19c"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.display
+            }
+            Column {
+              id: hCol
+              anchors.left: hIcon.right
+              anchors.leftMargin: Style.space(12)
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 2
+              Item {
+                width: parent.width
+                implicitHeight: Math.max(hTitle.implicitHeight, roleCh.implicitHeight)
+                Text {
+                  id: hTitle
+                  anchors.left: parent.left
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "Omaclasroom"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.title
+                  font.bold: true
+                }
+                Item {
+                  id: roleCh
+                  visible: root.showRoleSwitch
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  Text {
+                    text: root.teaching ? "TEACHING" : "STUDENT"
+                    color: rArea.containsMouse ? root.urgent : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                    font.letterSpacing: 1.0
+                  }
+                  MouseArea {
+                    id: rArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.selectRole(root.teaching ? "student" : "teacher")
+                  }
                 }
               }
-              Text { width: parent.width; text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.submittedCount + " done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.0; elide: Text.ElideRight }
+              Text {
+                width: parent.width
+                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.submittedCount + " done"
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.0
+                elide: Text.ElideRight
+              }
             }
           }
 
           // PANE SWITCHER
-          Row { width: parent.width; spacing: Style.spacing.md
+          Row {
+            width: parent.width
+            spacing: Style.spacing.md
             readonly property real cw: (width - spacing * 3) / 4
-            Repeater { model: root.paneNames
-              Button { required property string modelData; required property int index
-                width: parent.parent.cw; text: modelData; selected: index === root.selectedPane
-                hasCursor: root.cursorActive && index === root.selectedPane; bordered: true
-                foreground: root.foreground; fontFamily: root.fontFamily; fontSize: Style.font.bodySmall
+            Repeater {
+              model: root.paneNames
+              Button {
+                required property string modelData
+                required property int index
+                width: parent.parent.cw
+                text: modelData
+                selected: index === root.selectedPane
+                hasCursor: root.cursorActive && index === root.selectedPane
+                bordered: true
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
                 verticalPadding: Style.spacing.controlPaddingY
                 onClicked: root.selectPane(index)
                 onHovered: function(h) { if (h) root.cursorActive = true }
@@ -344,100 +460,329 @@ Panel {
           }
 
           // ERRORS
-          Text { visible: root.errorText !== ""; width: parent.width; text: root.errorText; color: root.urgent; font.family: root.fontFamily; font.pixelSize: Style.font.body; wrapMode: Text.WordWrap }
-          Text { visible: root.submitError !== ""; width: parent.width; text: "Submit: " + root.submitError; color: root.urgent; font.family: root.fontFamily; font.pixelSize: Style.font.body; wrapMode: Text.WordWrap }
-          Text { visible: root.errorText === "" && !root.loading && root.courses.length === 0; width: parent.width; text: "No courses found."; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body }
+          Text {
+            visible: root.errorText !== ""
+            width: parent.width
+            text: root.errorText
+            color: root.urgent
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body
+            wrapMode: Text.WordWrap
+          }
+          Text {
+            visible: root.errorText === "" && !root.loading && root.courses.length === 0
+            width: parent.width
+            text: "No courses found."
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body
+          }
 
           // ==================== OVERVIEW ====================
-          Column { visible: root.selectedPane === 0 && root.errorText === ""; width: parent.width; spacing: Style.space(8)
+          Column {
+            visible: root.selectedPane === 0 && root.errorText === ""
+            width: parent.width
+            spacing: Style.space(8)
 
-            Text { text: "SUMMARY"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2 }
-            Row { width: parent.width; spacing: Style.space(12)
-              Column { spacing: 2; Text { text: String(root.dueSoonCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }; Text { text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption } }
-              Column { spacing: 2; Text { text: String(root.missingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }; Text { text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption } }
-              Column { spacing: 2; Text { text: String(root.submittedCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }; Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption } }
-              Column { spacing: 2; Text { text: String(root.courses.length); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }; Text { text: "Courses"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption } }
+            Text {
+              text: "SUMMARY"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+            }
+            Row {
+              width: parent.width
+              spacing: Style.space(16)
+              Column {
+                spacing: 2
+                Text { text: String(root.totalCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { text: "Total"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              }
+              Column {
+                spacing: 2
+                Text { text: String(root.dueSoonCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              }
+              Column {
+                spacing: 2
+                Text { text: String(root.missingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              }
+              Column {
+                spacing: 2
+                Text { text: String(root.submittedCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              }
             }
 
-            Text { width: parent.width; text: ""; font.pixelSize: 1 }
+            Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
 
-            Text { text: "COURSES"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2 }
-            Repeater { model: root.courses
-              Column { required property var modelData; required property int index; width: parent.width; spacing: 4
-                Item { width: parent.width; implicitHeight: Math.max(cName.implicitHeight, cGrade.implicitHeight)
-                  Text { id: cName; anchors.left: parent.left; anchors.right: cGrade.left; anchors.rightMargin: 8; text: modelData.name; color: cLink.containsMouse ? root.urgent : root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight
-                    MouseArea { id: cLink; anchors.fill: parent; enabled: (modelData.alternateLink || "") !== ""; hoverEnabled: enabled; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.openLink(modelData.alternateLink) }
+            Text {
+              text: "COURSES"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+            }
+            Repeater {
+              model: root.courses
+              Column {
+                required property var modelData
+                required property int index
+                width: parent.width
+                spacing: 4
+                Item {
+                  width: parent.width
+                  implicitHeight: Math.max(cName.implicitHeight, cGrade.implicitHeight)
+                  Text {
+                    id: cName
+                    anchors.left: parent.left
+                    anchors.right: cGrade.left
+                    anchors.rightMargin: 8
+                    text: modelData.name
+                    color: cLink.containsMouse ? root.urgent : root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    elide: Text.ElideRight
+                    MouseArea {
+                      id: cLink
+                      anchors.fill: parent
+                      enabled: (modelData.alternateLink || "") !== ""
+                      hoverEnabled: enabled
+                      cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                      onClicked: root.openLink(modelData.alternateLink)
+                    }
                   }
-                  Text { id: cGrade; anchors.right: parent.right; text: root.grade(modelData); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text {
+                    id: cGrade
+                    anchors.right: parent.right
+                    text: root.grade(modelData)
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                  }
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
               }
             }
 
-            Text { visible: !!root.nextAssignment; width: parent.width; text: root.nextAssignment ? "Next: " + dueLabel(root.nextAssignment.due_at) + " -- " + root.nextAssignment.name : ""; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; wrapMode: Text.WordWrap }
+            Text {
+              visible: !!root.nextAssignment
+              width: parent.width
+              text: root.nextAssignment ? "Next: " + dueLabel(root.nextAssignment.due_at) + " — " + root.nextAssignment.name : ""
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.WordWrap
+            }
           }
 
           // ==================== ASSIGNMENTS ====================
-          Column { visible: root.selectedPane === 1 && root.errorText === ""; width: parent.width; spacing: Style.space(8)
+          Column {
+            visible: root.selectedPane === 1 && root.errorText === ""
+            width: parent.width
+            spacing: Style.space(8)
 
-            Text { text: "DUE SOON (" + root.dueSoonCount + ")"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2 }
-            Text { visible: root.dueSoonCount === 0; width: parent.width; text: "Nothing due soon."; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body }
-            Repeater { model: root.allDueSoon
-              Column { required property var modelData; required property int index; width: parent.width; spacing: 4
-                Item { width: parent.width; implicitHeight: aTitle.implicitHeight + aSub.implicitHeight + 4
-                  Column { anchors.left: parent.left; anchors.right: submitBtn.left; anchors.rightMargin: 8; spacing: 2
-                    Text { id: aTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
-                    Text { id: aSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+            // DUE SOON
+            Text {
+              text: "DUE SOON (" + root.dueSoonCount + ")"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+            }
+            Text {
+              visible: root.dueSoonCount === 0
+              width: parent.width
+              text: "Nothing due soon."
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+            }
+            Repeater {
+              model: root.allDueSoon
+              delegate: Column {
+                width: parent.width
+                spacing: 4
+                Item {
+                  width: parent.width
+                  implicitHeight: Math.max(dsName.implicitHeight, dsOpen.implicitHeight) + dsDue.implicitHeight + 4
+                  Column {
+                    anchors.left: parent.left
+                    anchors.right: dsOpen.visible ? dsOpen.left : parent.right
+                    anchors.rightMargin: dsOpen.visible ? 8 : 0
+                    spacing: 2
+                    Text { id: dsName; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { id: dsDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
-                  Rectangle { id: submitBtn; visible: !root.teaching; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; width: sText.implicitWidth + 14; height: sText.implicitHeight + 8; radius: 4; color: sArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"; border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25); border.width: 1
-                    Text { id: sText; anchors.centerIn: parent; text: "Submit"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
-                    MouseArea { id: sArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.submitAssignment(modelData) }
+                  Rectangle {
+                    id: dsOpen
+                    visible: (modelData.alternateLink || "") !== ""
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: dsOpenTxt.implicitWidth + 14
+                    height: dsOpenTxt.implicitHeight + 8
+                    radius: 4
+                    color: dsOpenArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+                    Text { id: dsOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    MouseArea { id: dsOpenArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openLink(modelData.alternateLink) }
                   }
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
               }
             }
 
-            Text { text: "UPCOMING (" + root.upcomingCount + ")"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2; topPadding: 8 }
-            Repeater { model: root.allUpcoming
-              Column { required property var modelData; required property int index; width: parent.width; spacing: 4
-                Column { width: parent.width; spacing: 2
-                  Text { width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
-                  Text { width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+            // UPCOMING
+            Text {
+              text: "UPCOMING (" + root.upcomingCount + ")"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+              topPadding: 8
+            }
+            Repeater {
+              model: root.allUpcoming
+              delegate: Column {
+                width: parent.width
+                spacing: 4
+                Item {
+                  width: parent.width
+                  implicitHeight: Math.max(upName.implicitHeight, upOpen.implicitHeight) + upDue.implicitHeight + 4
+                  Column {
+                    anchors.left: parent.left
+                    anchors.right: upOpen.visible ? upOpen.left : parent.right
+                    anchors.rightMargin: upOpen.visible ? 8 : 0
+                    spacing: 2
+                    Text { id: upName; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { id: upDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                  }
+                  Rectangle {
+                    id: upOpen
+                    visible: (modelData.alternateLink || "") !== ""
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: upOpenTxt.implicitWidth + 14
+                    height: upOpenTxt.implicitHeight + 8
+                    radius: 4
+                    color: upOpenArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+                    Text { id: upOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    MouseArea { id: upOpenArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openLink(modelData.alternateLink) }
+                  }
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
               }
             }
 
-            Text { visible: root.submittedCount > 0; text: "DONE (" + root.submittedCount + ")"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2; topPadding: 8 }
-            Repeater { model: root.submittedExpanded ? root.allSubmitted : (root.submittedCount > 0 ? [root.allSubmitted[0]] : [])
-              Column { required property var modelData; width: parent.width; spacing: 4
-                Column { width: parent.width; spacing: 2
-                  Text { width: parent.width; text: modelData.name; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; maximumLineCount: 1 }
-                  Text { width: parent.width; text: dueLabel(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: Qt.darker(root.dim, 1.3); font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+            // TURNED IN
+            Text {
+              visible: root.submittedCount > 0
+              text: "TURNED IN (" + root.submittedCount + ")"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+              topPadding: 8
+            }
+            Repeater {
+              model: root.allSubmitted
+              delegate: Column {
+                width: parent.width
+                spacing: 4
+                Item {
+                  width: parent.width
+                  implicitHeight: Math.max(cmName.implicitHeight, cmOpen.implicitHeight) + cmDue.implicitHeight + 4
+                  Column {
+                    anchors.left: parent.left
+                    anchors.right: cmOpen.visible ? cmOpen.left : parent.right
+                    anchors.rightMargin: cmOpen.visible ? 8 : 0
+                    spacing: 2
+                    Text { id: cmName; width: parent.width; text: modelData.name; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { id: cmDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: Qt.darker(root.dim, 1.3); font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                  }
+                  Rectangle {
+                    id: cmOpen
+                    visible: (modelData.alternateLink || "") !== ""
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: cmOpenTxt.implicitWidth + 14
+                    height: cmOpenTxt.implicitHeight + 8
+                    radius: 4
+                    color: cmOpenArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+                    Text { id: cmOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    MouseArea { id: cmOpenArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openLink(modelData.alternateLink) }
+                  }
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08) }
               }
             }
-            Text { visible: root.submittedCount > 1; text: root.submittedExpanded ? "show less" : "+ " + (root.submittedCount - 1) + " more", color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption
-              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.submittedExpanded = !root.submittedExpanded }
-            }
           }
 
           // ==================== MISSING ====================
-          Column { visible: root.selectedPane === 2 && root.errorText === ""; width: parent.width; spacing: Style.space(8)
+          Column {
+            visible: root.selectedPane === 2 && root.errorText === ""
+            width: parent.width
+            spacing: Style.space(8)
 
-            Text { text: "MISSING (" + root.missingCount + ")"; color: root.urgent; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2 }
-            Text { visible: root.missingCount === 0; width: parent.width; text: "Nothing missing. Good job!"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body }
-            Repeater { model: root.allMissing
-              Column { required property var modelData; required property int index; width: parent.width; spacing: 4
-                Item { width: parent.width; implicitHeight: mTitle.implicitHeight + mSub.implicitHeight + 4
-                  Column { anchors.left: parent.left; anchors.right: submitBtn2.left; anchors.rightMargin: 8; spacing: 2
+            Text {
+              text: "MISSING (" + root.missingCount + ")"
+              color: root.urgent
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+            }
+            Text {
+              visible: root.missingCount === 0
+              width: parent.width
+              text: "Nothing missing. Good job!"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+            }
+            Repeater {
+              model: root.allMissing
+              Column {
+                required property var modelData
+                required property int index
+                width: parent.width
+                spacing: 4
+                Item {
+                  width: parent.width
+                  implicitHeight: mTitle.implicitHeight + mSub.implicitHeight + 4
+                  Column {
+                    anchors.left: parent.left
+                    anchors.right: submitBtn2.left
+                    anchors.rightMargin: 8
+                    spacing: 2
                     Text { id: mTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
                     Text { id: mSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
-                  Rectangle { id: submitBtn2; visible: !root.teaching; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; width: sText2.implicitWidth + 14; height: sText2.implicitHeight + 8; radius: 4; color: sArea2.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"; border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25); border.width: 1
-                    Text { id: sText2; anchors.centerIn: parent; text: "Submit"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                  Rectangle {
+                    id: submitBtn2
+                    visible: !root.teaching
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: sText2.implicitWidth + 14
+                    height: sText2.implicitHeight + 8
+                    radius: 4
+                    color: sArea2.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+                    Text { id: sText2; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: sArea2; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.submitAssignment(modelData) }
                   }
                 }
@@ -447,34 +792,122 @@ Panel {
           }
 
           // ==================== COURSES ====================
-          Column { visible: root.selectedPane === 3 && root.errorText === ""; width: parent.width; spacing: Style.space(8)
+          Column {
+            visible: root.selectedPane === 3 && root.errorText === ""
+            width: parent.width
+            spacing: Style.space(8)
 
-            Item { width: parent.width; implicitHeight: cPos.implicitHeight
-              Text { id: cPos; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; text: "COURSE " + (root.selectedCourseIndex + 1) + " OF " + root.courses.length; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; font.letterSpacing: 1.2 }
+            Item {
+              width: parent.width
+              implicitHeight: cPos.implicitHeight
+              Text {
+                id: cPos
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "COURSE " + (root.selectedCourseIndex + 1) + " OF " + root.courses.length
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.2
+              }
             }
 
-            Item { width: parent.width; implicitHeight: Math.max(pCourse.implicitHeight, cLabel.implicitHeight, nCourse.implicitHeight)
+            Item {
+              width: parent.width
+              implicitHeight: Math.max(pCourse.implicitHeight, cLabel.implicitHeight, nCourse.implicitHeight)
               PanelActionButton { id: pCourse; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; iconText: "\uf053"; enabled: root.courses.length > 1; foreground: root.foreground; fontFamily: root.fontFamily; onClicked: root.selectCourseOffset(-1) }
               Text { id: cLabel; anchors.left: pCourse.right; anchors.right: nCourse.left; anchors.leftMargin: 8; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; text: root.selectedCourse ? root.courseLabel(root.selectedCourse, root.selectedCourseIndex) : ""; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.subtitle; font.bold: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight }
               PanelActionButton { id: nCourse; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; iconText: "\uf054"; enabled: root.courses.length > 1; foreground: root.foreground; fontFamily: root.fontFamily; onClicked: root.selectCourseOffset(1) }
             }
 
-            Text { visible: !!root.selectedCourse; width: parent.width; text: root.selectedCourse ? root.selectedCourse.name : ""; color: cTitleLink.containsMouse ? root.urgent : root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap
-              MouseArea { id: cTitleLink; anchors.fill: parent; enabled: (root.selectedCourse && (root.selectedCourse.alternateLink || "") !== ""); hoverEnabled: enabled; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.openLink(root.selectedCourse.alternateLink) }
+            Text {
+              visible: !!root.selectedCourse
+              width: parent.width
+              text: root.selectedCourse ? root.selectedCourse.name : ""
+              color: cTitleLink.containsMouse ? root.urgent : root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              horizontalAlignment: Text.AlignHCenter
+              wrapMode: Text.WordWrap
+              MouseArea {
+                id: cTitleLink
+                anchors.fill: parent
+                enabled: (root.selectedCourse && (root.selectedCourse.alternateLink || "") !== "")
+                hoverEnabled: enabled
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.openLink(root.selectedCourse.alternateLink)
+              }
             }
 
-            Repeater { model: root.selectedCourseAssignments
-              Column { required property var modelData; required property int index; width: parent.width; spacing: 4
-                Item { width: parent.width; implicitHeight: coTitle.implicitHeight + coSub.implicitHeight + 4
-                  Column { anchors.left: parent.left; anchors.right: coSubmit.left; anchors.rightMargin: 8; spacing: 2
+            // Per-course summary
+            Item {
+              visible: !!root.selectedCourse && root.selectedCourseAssignments.length > 0
+              width: parent.width
+              implicitHeight: summaryRow.implicitHeight
+              Row {
+                id: summaryRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: Style.space(16)
+                Column { spacing: 2
+                  Text { text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "due_soon")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text { text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                }
+                Column { spacing: 2
+                  Text { text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "missing")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text { text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                }
+                Column { spacing: 2
+                  Text { text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "submitted")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                }
+              }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
+
+            Repeater {
+              model: root.selectedCourseAssignments
+              Column {
+                required property var modelData
+                required property int index
+                width: parent.width
+                spacing: 4
+                Item {
+                  width: parent.width
+                  implicitHeight: coTitle.implicitHeight + coSub.implicitHeight + 4
+                  Column {
+                    anchors.left: parent.left
+                    anchors.right: coSubmit.left
+                    anchors.rightMargin: 8
+                    spacing: 2
                     Text { id: coTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
                     Text { id: coSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
-                  Rectangle { id: coSubmit; visible: !root.teaching && root.getAssignmentStatus(modelData) !== "submitted"; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; width: coSText.implicitWidth + 14; height: coSText.implicitHeight + 8; radius: 4; color: coSArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"; border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25); border.width: 1
-                    Text { id: coSText; anchors.centerIn: parent; text: "Submit"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                  Rectangle {
+                    id: coSubmit
+                    visible: !root.teaching && root.getAssignmentStatus(modelData) !== "submitted"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: coSText.implicitWidth + 14
+                    height: coSText.implicitHeight + 8
+                    radius: 4
+                    color: coSArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+                    Text { id: coSText; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: coSArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.submitAssignment(modelData) }
                   }
-                  Text { visible: root.getAssignmentStatus(modelData) === "submitted"; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                  Text {
+                    visible: root.getAssignmentStatus(modelData) === "submitted"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Done"
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                  }
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
               }
@@ -482,7 +915,14 @@ Panel {
           }
 
           Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.3) }
-          Text { width: parent.width; text: "R refresh | 1-4 switch views | S/T switch role"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; horizontalAlignment: Text.AlignHCenter }
+          Text {
+            width: parent.width
+            text: "R refresh | 1-4 switch views | S/T switch role"
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            horizontalAlignment: Text.AlignHCenter
+          }
         }
       }
     }

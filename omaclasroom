@@ -498,7 +498,6 @@ class ClassroomClient:
                 "addAttachments": [{
                     "link": {
                         "url": link_url,
-                        "title": title or link_url,
                     },
                 }],
             },
