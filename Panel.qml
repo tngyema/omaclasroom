@@ -326,7 +326,7 @@ Panel {
     active: root.errorText !== "" || root.missingCount > 0 || root.urgentCount > 0
     tooltipText: root.errorText !== "" ? "Omaclasroom -- " + root.errorText
       : root.urgentCount > 0 ? "REMINDER: " + root.urgentCount + " assignment(s) due within 1 day!"
-      : "Omaclasroom -- " + root.dueSoonCount + " due, " + root.missingCount + " missing, " + root.submittedCount + " done"
+      : "Omaclasroom -- " + root.dueSoonCount + " due, " + root.missingCount + " missing, " + root.upcomingCount + " upcoming, " + root.submittedCount + " done"
     onPressed: function(btn) {
       if (btn === Qt.RightButton) root.refreshNow()
       else root.toggle()
@@ -435,7 +435,7 @@ Panel {
               }
               Text {
                 width: parent.width
-                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.submittedCount + " done | " + Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")
+                text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.upcomingCount + " upcoming | " + root.submittedCount + " done | " + Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")
                 color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -580,6 +580,11 @@ Panel {
                 spacing: 2
                 Text { text: String(root.submittedCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
                 Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              }
+              Column {
+                spacing: 2
+                Text { text: String(root.upcomingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { text: "Upcoming"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
             }
 
