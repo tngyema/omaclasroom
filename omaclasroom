@@ -40,6 +40,7 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_CLASSROOM_SCOPES = [
     "https://www.googleapis.com/auth/classroom.courses.readonly",
+    "https://www.googleapis.com/auth/classroom.coursework.me",
     "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
     "https://www.googleapis.com/auth/classroom.coursework.students.readonly",
     "https://www.googleapis.com/auth/classroom.rosters.readonly",
@@ -275,6 +276,64 @@ class ClassroomClient:
         except (URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as error:
             raise RuntimeError(f"Could not reach Google Classroom: {error}") from error
 
+    def _post(self, url: str, body: dict[str, Any] | None = None) -> Any:
+        data = json.dumps(body or {}).encode("utf-8")
+        request = Request(url, data=data, method="POST")
+        request.add_header("Authorization", f"Bearer {self.access_token}")
+        request.add_header("Content-Type", "application/json")
+        request.add_header("Accept", "application/json")
+        try:
+            with self.opener.open(request, timeout=self._request_timeout()) as response:
+                raw = response.read(MAX_RESPONSE_BYTES + 1)
+                return json.loads(raw.decode("utf-8")) if raw else {}
+        except HTTPError as error:
+            body_text = error.read(MAX_RESPONSE_BYTES).decode("utf-8", errors="replace")
+            if error.code == 401:
+                raise ClassroomAuthenticationError(
+                    "Google rejected the access token"
+                ) from error
+            if error.code == 403:
+                raise ClassroomPermissionError(
+                    "Google denied access to Classroom data"
+                ) from error
+            try:
+                err = json.loads(body_text)
+                msg = err.get("error", {}).get("message", str(error))
+            except (json.JSONDecodeError, ValueError):
+                msg = str(error)
+            raise RuntimeError(f"Classroom API returned HTTP {error.code}: {msg}") from error
+        except (URLError, TimeoutError) as error:
+            raise RuntimeError(f"Could not reach Google Classroom: {error}") from error
+
+    def _patch(self, url: str, body: dict[str, Any] | None = None) -> Any:
+        data = json.dumps(body or {}).encode("utf-8")
+        request = Request(url, data=data, method="PATCH")
+        request.add_header("Authorization", f"Bearer {self.access_token}")
+        request.add_header("Content-Type", "application/json")
+        request.add_header("Accept", "application/json")
+        try:
+            with self.opener.open(request, timeout=self._request_timeout()) as response:
+                raw = response.read(MAX_RESPONSE_BYTES + 1)
+                return json.loads(raw.decode("utf-8")) if raw else {}
+        except HTTPError as error:
+            body_text = error.read(MAX_RESPONSE_BYTES).decode("utf-8", errors="replace")
+            if error.code == 401:
+                raise ClassroomAuthenticationError(
+                    "Google rejected the access token"
+                ) from error
+            if error.code == 403:
+                raise ClassroomPermissionError(
+                    "Google denied access to Classroom data"
+                ) from error
+            try:
+                err = json.loads(body_text)
+                msg = err.get("error", {}).get("message", str(error))
+            except (json.JSONDecodeError, ValueError):
+                msg = str(error)
+            raise RuntimeError(f"Classroom API returned HTTP {error.code}: {msg}") from error
+        except (URLError, TimeoutError) as error:
+            raise RuntimeError(f"Could not reach Google Classroom: {error}") from error
+
     def get_my_user_id(self) -> str:
         """Get the authenticated user's Google Classroom user ID."""
         data = self._get(f"{CLASSROOM_BASE}/v1/userProfiles/me")
@@ -382,6 +441,89 @@ class ClassroomClient:
             if not page_token:
                 break
         return submitted
+
+    def get_or_create_submission(
+        self, course_id: str, course_work_id: str,
+    ) -> dict[str, Any]:
+        """Get or create a student submission for an assignment."""
+        data = self._get(
+            f"{CLASSROOM_BASE}/v1/courses/{course_id}/courseWork"
+            f"/{course_work_id}/studentSubmissions",
+            {"userId": "me"},
+        )
+        submissions = data.get("studentSubmissions", [])
+        if submissions:
+            return submissions[0]
+        return self._post(
+            f"{CLASSROOM_BASE}/v1/courses/{course_id}/courseWork"
+            f"/{course_work_id}/studentSubmissions",
+            {"userId": "me"},
+        )
+
+    def add_link_attachment(
+        self, course_id: str, course_work_id: str,
+        submission_id: str, link_url: str, title: str = "",
+    ) -> dict[str, Any]:
+        """Add a link attachment to a student submission."""
+        return self._post(
+            f"{CLASSROOM_BASE}/v1/courses/{course_id}/courseWork"
+            f"/{course_work_id}/studentSubmissions/{submission_id}:modifyAttachments",
+            {
+                "addAttachments": [{
+                    "link": {
+                        "url": link_url,
+                        "title": title or link_url,
+                    },
+                }],
+            },
+        )
+
+    def add_drive_attachment(
+        self, course_id: str, course_work_id: str,
+        submission_id: str, drive_file_id: str, title: str = "",
+    ) -> dict[str, Any]:
+        """Add a Google Drive file attachment to a student submission."""
+        return self._post(
+            f"{CLASSROOM_BASE}/v1/courses/{course_id}/courseWork"
+            f"/{course_work_id}/studentSubmissions/{submission_id}:modifyAttachments",
+            {
+                "addAttachments": [{
+                    "driveFile": {
+                        "id": drive_file_id,
+                        "title": title,
+                    },
+                }],
+            },
+        )
+
+    def turn_in(
+        self, course_id: str, course_work_id: str, submission_id: str,
+    ) -> dict[str, Any]:
+        """Turn in a student submission."""
+        return self._post(
+            f"{CLASSROOM_BASE}/v1/courses/{course_id}/courseWork"
+            f"/{course_work_id}/studentSubmissions/{submission_id}:turnIn",
+        )
+
+    def submit_assignment(
+        self, course_id: str, course_work_id: str,
+        link_url: str = "", drive_file_id: str = "",
+        title: str = "",
+    ) -> dict[str, Any]:
+        """Full submit flow: get/create submission, add attachment, turn in."""
+        submission = self.get_or_create_submission(course_id, course_work_id)
+        sub_id = submission.get("id", "")
+        if not sub_id:
+            raise RuntimeError("Could not create or find submission")
+        if link_url:
+            self.add_link_attachment(
+                course_id, course_work_id, sub_id, link_url, title,
+            )
+        elif drive_file_id:
+            self.add_drive_attachment(
+                course_id, course_work_id, sub_id, drive_file_id, title,
+            )
+        return self.turn_in(course_id, course_work_id, sub_id)
 
 
 def parse_time(value: Any) -> datetime | None:
@@ -720,7 +862,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "command",
-        choices=["fetch", "set-token", "clear-token", "hide-course", "unhide-course"],
+        choices=["fetch", "set-token", "clear-token", "hide-course", "unhide-course",
+                 "submit"],
     )
     parser.add_argument("course_id", nargs="?")
     parser.add_argument("--days", type=int, default=14)
@@ -729,6 +872,12 @@ def main() -> int:
     parser.add_argument("--course-section", default="")
     parser.add_argument("--client-id", default="")
     parser.add_argument("--client-secret", default="")
+    parser.add_argument("--course-work-id", default="",
+                        help="Assignment ID to submit")
+    parser.add_argument("--link-url", default="",
+                        help="Link URL to attach and submit")
+    parser.add_argument("--title", default="",
+                        help="Title for the attachment")
     args = parser.parse_args()
     try:
         if args.command == "set-token":
@@ -750,6 +899,28 @@ def main() -> int:
             hidden = args.command == "hide-course"
             set_course_hidden(args.course_id, hidden, args.course_name, args.course_section)
             print("Course hidden." if hidden else "Course unhidden.")
+            return 0
+        if args.command == "submit":
+            if not args.course_id:
+                raise RuntimeError("A course ID is required")
+            if not args.course_work_id:
+                raise RuntimeError("An assignment ID (--course-work-id) is required")
+            creds = get_credentials()
+            if not creds:
+                raise RuntimeError(
+                    "No Google Classroom credentials are saved. "
+                    "Run 'omaclasroom set-token' to authorize."
+                )
+            access_token = refresh_access_token(
+                creds["client_id"], creds["client_secret"], creds["refresh_token"],
+            )
+            client = ClassroomClient(access_token)
+            result = client.submit_assignment(
+                args.course_id, args.course_work_id,
+                link_url=args.link_url, title=args.title,
+            )
+            state = result.get("state", "UNKNOWN")
+            print(f"Assignment submitted! State: {state}")
             return 0
         creds = get_credentials()
         if not creds:
