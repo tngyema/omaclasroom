@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.omaclasroom",
+  "name": "Omaclasroom",
+  "version": "1.0.0",
+  "author": "Omaclasroom Contributors",
+  "license": "MIT",
+  "description": "Google Classroom grades and upcoming assignments for the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {"barWidget": "Panel.qml"},
+  "barWidget": {
+    "displayName": "Omaclasroom",
+    "description": "Student grades, teacher deadlines, and upcoming Google Classroom assignments.",
+    "category": "Productivity",
+    "aliases": ["classroom", "assignments", "school", "google"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "days": 14,
+      "refreshIntervalSec": 21600
+    },
+    "schema": [
+      {
+        "key": "days",
+        "type": "integer",
+        "label": "Upcoming assignment window (days)",
+        "min": 1,
+        "max": 60,
+        "step": 1,
+        "defaultValue": 14
+      },
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 300,
+        "max": 86400,
+        "step": 900,
+        "defaultValue": 21600
+      }
+    ]
+  }
+}
