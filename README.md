@@ -29,7 +29,8 @@ Then authorize with Google:
   --client-secret YOUR_CLIENT_SECRET
 ```
 
-Your browser will open for Google authorization. After granting access, the token is saved securely in your system keyring.
+Your browser will open for Google authorization. After granting access, the
+refresh token is saved permanently — you never need to authorize again.
 
 ---
 
@@ -89,6 +90,34 @@ omarchy bar set io.github.omaclasroom refreshIntervalSec 10800 --json
 
 ---
 
+## Credential Persistence
+
+Omaclasroom uses OAuth2 **refresh tokens** for permanent authentication.
+You only need to authorize once — the token persists across reboots.
+
+### How It Works
+
+1. `set-token` opens your browser for a one-time Google consent
+2. A refresh token is saved to your **system keyring** (or `credentials.json`
+   as fallback on systems without `libsecret`)
+3. Every refresh cycle, the stored token silently obtains a new access token
+   — no browser, no interaction required
+
+### Storage
+
+| Location | When Used |
+|----------|-----------|
+| System keyring (`secret-tool`) | Default when `libsecret` is installed |
+| `~/.config/omarchy/plugins/io.github.omaclasroom/credentials.json` | Fallback |
+
+### When You Need to Re-authorize
+
+- You run `omaclasroom clear-token`
+- You revoke access in [Google Account permissions](https://myaccount.google.com/permissions)
+- Google invalidates the token (rare — typically after 6+ months of non-use)
+
+---
+
 ## Remove
 
 ```sh
@@ -100,7 +129,9 @@ omarchy plugin remove io.github.omaclasroom
 ## Privacy
 
 - Sends authenticated HTTPS requests **only** to Google Classroom API
-- Credentials stored in the **system keyring**, never written to config files
+- Credentials stored in the **system keyring** when available, with a
+  **file-based fallback** for systems without `libsecret`
+- Credentials file uses `0600` permissions (owner-read-only)
 - No data is collected, logged, or sent elsewhere
 
 ---
