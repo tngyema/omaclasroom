@@ -131,10 +131,17 @@ def get_credentials() -> dict[str, str] | None:
 
 def save_credentials(client_id: str, client_secret: str, refresh_token: str) -> None:
     """Store OAuth2 credentials in keyring and file."""
-    _keyring_store("client_id", client_id, "Omaclasroom Client ID")
-    _keyring_store("client_secret", client_secret, "Omaclasroom Client Secret")
-    _keyring_store("refresh_token", refresh_token, "Omaclasroom Refresh Token")
-    # Also save to file for easier setup
+    keyring_ok = True
+    for key, value, label in [
+        ("client_id", client_id, "Omaclasroom Client ID"),
+        ("client_secret", client_secret, "Omaclasroom Client Secret"),
+        ("refresh_token", refresh_token, "Omaclasroom Refresh Token"),
+    ]:
+        try:
+            _keyring_store(key, value, label)
+        except RuntimeError:
+            keyring_ok = False
+    # Always save to file as fallback
     creds_file = os.path.join(os.path.dirname(__file__), "credentials.json")
     try:
         with open(creds_file, "w") as f:
@@ -146,12 +153,17 @@ def save_credentials(client_id: str, client_secret: str, refresh_token: str) -> 
         os.chmod(creds_file, 0o600)
     except OSError:
         pass
+    if not keyring_ok:
+        print("Note: Could not store in system keyring; saved to credentials.json instead.")
 
 
 def clear_credentials() -> None:
     """Remove stored OAuth2 credentials from keyring and file."""
     for key in ("client_id", "client_secret", "refresh_token"):
-        _keyring_clear(key)
+        try:
+            _keyring_clear(key)
+        except RuntimeError:
+            pass
     creds_file = os.path.join(os.path.dirname(__file__), "credentials.json")
     if os.path.exists(creds_file):
         try:
