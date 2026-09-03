@@ -1,28 +1,24 @@
 # Omaclasroom
 
-Google Classroom grades, deadlines, and upcoming assignments — right in your Omarchy bar.
+**Google Classroom in your Omarchy bar.** Stop alt-tabbing to check assignments.
 
-Built for [Chris Titus Tech](https://christitus.com/) and the Omarchy community.
+Built for students using [Chris Titus Tech](https://christitus.com/)'s Omarchy setup.
 
-![Omaclasroom Student View](Pictures/omaclasroom1.png)
-![Omaclasroom Assignments](Pictures/omaclasroom2.png)
-![Omaclasroom Courses](Pictures/omaclasroom3.png)
-![Omaclasroom Missing](Pictures/omaclasroom4.png)
+![Student View](Pictures/omaclasroom1.png)
+![Assignments](Pictures/omaclasroom2.png)
+![Courses](Pictures/omaclasroom3.png)
+![Missing](Pictures/omaclasroom4.png)
 
 ---
 
-## Quick Start
-
-> **Requires Python 3.10+** and **`libsecret`** for credential storage.
-
-Install the plugin and its dependency:
+## Install
 
 ```sh
 omarchy pkg add libsecret
 omarchy plugin add https://github.com/tngyema/omaclasroom.git --enable
 ```
 
-Then authorize with Google:
+Set up Google auth:
 
 ```sh
 ~/.config/omarchy/plugins/io.github.omaclasroom/omaclasroom set-token \
@@ -30,103 +26,65 @@ Then authorize with Google:
   --client-secret YOUR_CLIENT_SECRET
 ```
 
-Your browser will open for Google authorization. After granting access, the
-refresh token is saved permanently — you never need to authorize again.
+Browser opens once. Token saves. Done forever.
 
 ---
 
-## Features
+## What You Get
 
-| Feature | Description |
-|---------|-------------|
-| **Overview Panel** | Course grades, due counts, and next-up assignments at a glance |
-| **Assignments View** | All upcoming work sorted by due date |
-| **Courses View** | Per-course details and assignment lists |
-| **Missing View** | Overdue assignments with one-click open |
-| **Auto Refresh** | Configurable interval (default: 6 hours) |
-| **OAuth2 Auth** | Secure token flow via local browser redirect |
-| **Keyboard Control** | Full navigation — `1`-`4` views, `S`/`T` roles, `R` refresh |
+- **Overview** — Grades, due counts, upcoming work
+- **Assignments** — Everything sorted by due date
+- **Courses** — Drill into individual classes
+- **Missing** — Overdue stuff with one-click open
+- **Auto Refresh** — Every 6 hours by default
+- **Keyboard** — `1`-`4` views, `S`/`T` roles, `R` refresh
 
 ---
 
-## Student Mode
+## Usage
 
-Currently available for **students**. See your grades, track upcoming assignments,
-and never miss a deadline.
-
-### Usage
-
-| Action | Method |
-|--------|--------|
-| Open/close panel | Left-click the bar icon |
-| Refresh data | Right-click the bar icon |
-| Switch views | Press `1`, `2`, `3`, or `4` |
-| Switch role | Press `S` or `T` |
-| Refresh | Press `R` |
-| Close panel | Press `Escape` |
+| Action | How |
+|--------|-----|
+| Open/close | Left-click icon |
+| Refresh | Right-click icon |
+| Switch views | `1` `2` `3` `4` |
+| Refresh | `R` |
+| Close | `Escape` |
 
 ---
 
-## Teacher Mode
-
-**Coming soon.** Teacher features including grading views, assignment management,
-and student progress tracking are in development.
-
----
-
-## Configuration
+## Config
 
 ```sh
-# Change assignment window to 21 days
 omarchy bar set io.github.omaclasroom days 21 --json
-
-# Change refresh to every 3 hours
 omarchy bar set io.github.omaclasroom refreshIntervalSec 10800 --json
 ```
 
-| Setting | Default | Range | Description |
-|---------|---------|-------|-------------|
-| `days` | 14 | 1–60 | Assignment window in days |
-| `refreshIntervalSec` | 21600 | 300–86400 | Auto-refresh interval |
+| Setting | Default | Range |
+|---------|---------|-------|
+| `days` | 14 | 1–60 |
+| `refreshIntervalSec` | 21600 | 300–86400 |
 
 ---
 
 ## Google Cloud Setup
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project (or select existing)
-3. Enable the **Google Classroom API**
-4. Go to **APIs & Services → Credentials**
-5. Create an **OAuth 2.0 Client ID** (Desktop app type)
-6. Copy the **Client ID** and **Client Secret**
+1. [Google Cloud Console](https://console.cloud.google.com/)
+2. Create/select project
+3. Enable **Google Classroom API**
+4. APIs & Services → Credentials
+5. Create **OAuth 2.0 Client ID** (Desktop app)
+6. Copy Client ID + Secret
 
 ---
 
-## Credential Persistence
+## How Auth Works
 
-Omaclasroom uses OAuth2 **refresh tokens** for permanent authentication.
-You only need to authorize once — the token persists across reboots.
+One-time browser consent → refresh token saved to keyring → silent access token refreshes.
 
-### How It Works
+No browser popups after setup. Token persists across reboots.
 
-1. `set-token` opens your browser for a one-time Google consent
-2. A refresh token is saved to your **system keyring** (or `credentials.json`
-   as fallback on systems without `libsecret`)
-3. Every refresh cycle, the stored token silently obtains a new access token
-   — no browser, no interaction required
-
-### Storage
-
-| Location | When Used |
-|----------|-----------|
-| System keyring (`secret-tool`) | Default when `libsecret` is installed |
-| `~/.config/omarchy/plugins/io.github.omaclasroom/credentials.json` | Fallback |
-
-### When You Need to Re-authorize
-
-- You run `omaclasroom clear-token`
-- You revoke access in [Google Account permissions](https://myaccount.google.com/permissions)
-- Google invalidates the token (rare — typically after 6+ months of non-use)
+**Re-authorize when:** You run `omaclasroom clear-token`, revoke in [Google permissions](https://myaccount.google.com/permissions), or after ~6 months of non-use.
 
 ---
 
@@ -140,14 +98,19 @@ omarchy plugin remove io.github.omaclasroom
 
 ## Privacy
 
-- Sends authenticated HTTPS requests **only** to Google Classroom API
-- Credentials stored in the **system keyring** when available, with a
-  **file-based fallback** for systems without `libsecret`
-- Credentials file uses `0600` permissions (owner-read-only)
-- No data is collected, logged, or sent elsewhere
+- HTTPS to Google Classroom API only
+- Credentials in system keyring (file fallback if no `libsecret`)
+- File permissions `0600`
+- No tracking, no logging, no data sent elsewhere
+
+---
+
+## Teacher Mode
+
+**Coming soon.** Grading views, assignment management, student tracking.
 
 ---
 
 ## License
 
-[MIT License](LICENSE)
+[MIT](LICENSE)
