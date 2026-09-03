@@ -1,4 +1,4 @@
-# Omaclasroom
+# 󰋀 Omaclasroom
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Platform: Omarchy](https://img.shields.io/badge/Platform-Omarchy-purple?style=for-the-badge)](https://omarchy.org/)

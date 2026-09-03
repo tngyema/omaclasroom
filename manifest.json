@@ -3,6 +3,7 @@
   "id": "io.github.omaclasroom",
   "name": "Omaclasroom",
   "version": "1.0.0",
+  "icon": "󰋀",
   "author": "Omaclasroom Contributors",
   "description": "Google Classroom grades and upcoming assignments for the Omarchy bar.",
   "license": "MIT",
