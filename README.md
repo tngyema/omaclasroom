@@ -1,12 +1,13 @@
-# 󰋀 Omaclasroom
+# Omaclasroom
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-[![Platform: Omarchy](https://img.shields.io/badge/Platform-Omarchy-purple?style=for-the-badge)](https://omarchy.org/)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green?style=for-the-badge)](https://www.python.org/)
+Google Classroom grades, deadlines, and upcoming assignments — right in your Omarchy bar.
 
-Google Classroom grades, teacher deadlines, and upcoming assignments — right in your Omarchy bar.
+Built for [Chris Titus Tech](https://christitus.com/) and the Omarchy community.
 
-![Omaclasroom Preview](preview.png)
+![Omaclasroom Student View](Pictures/omaclasroom1.png)
+![Omaclasroom Assignments](Pictures/omaclasroom2.png)
+![Omaclasroom Courses](Pictures/omaclasroom3.png)
+![Omaclasroom Missing](Pictures/omaclasroom4.png)
 
 ---
 
@@ -44,12 +45,16 @@ refresh token is saved permanently — you never need to authorize again.
 | **Missing View** | Overdue assignments with one-click open |
 | **Auto Refresh** | Configurable interval (default: 6 hours) |
 | **OAuth2 Auth** | Secure token flow via local browser redirect |
-| **Student + Teacher** | Automatically detects your role per course |
 | **Keyboard Control** | Full navigation — `1`-`4` views, `S`/`T` roles, `R` refresh |
 
 ---
 
-## Usage
+## Student Mode
+
+Currently available for **students**. See your grades, track upcoming assignments,
+and never miss a deadline.
+
+### Usage
 
 | Action | Method |
 |--------|--------|
@@ -59,6 +64,13 @@ refresh token is saved permanently — you never need to authorize again.
 | Switch role | Press `S` or `T` |
 | Refresh | Press `R` |
 | Close panel | Press `Escape` |
+
+---
+
+## Teacher Mode
+
+**Coming soon.** Teacher features including grading views, assignment management,
+and student progress tracking are in development.
 
 ---
 
