@@ -6,11 +6,6 @@
 
 **Google Classroom grades and assignments in your Omarchy bar.** Check your grades, track deadlines, and never miss an assignment again.
 
-![Student View](Pictures/omaclasroom1.png)
-![Assignments](Pictures/omaclasroom2.png)
-![Courses](Pictures/omaclasroom3.png)
-![Missing](Pictures/omaclasroom4.png)
-
 ---
 
 ## Quick Start
@@ -38,15 +33,29 @@ Your browser will open for Google authorization. After granting access, the refr
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Overview Panel** | Course grades, due counts, and next-up assignments at a glance |
-| **Assignments View** | All upcoming work sorted by due date |
-| **Courses View** | Per-course details and assignment lists |
-| **Missing View** | Overdue assignments with one-click open |
-| **Auto Refresh** | Configurable interval (default: 6 hours) |
-| **OAuth2 Auth** | Secure token flow via local browser redirect |
-| **Keyboard Control** | Full navigation — `1`-`4` views, `S`/`T` roles, `R` refresh |
+### Overview Panel
+
+The main view shows everything at a glance — course grades, assignment counts, and what's coming up next.
+
+![Student View](Pictures/omaclasroom1.png)
+
+### Assignments View
+
+All your upcoming work sorted by due date. See what's due soon, what's coming up, and what you've already turned in.
+
+![Assignments](Pictures/omaclasroom2.png)
+
+### Courses View
+
+Drill into individual courses to see grades and assignments for each class. Navigate between courses with arrow buttons or keyboard shortcuts.
+
+![Courses](Pictures/omaclasroom3.png)
+
+### Missing View
+
+Overdue assignments with one-click open. Never lose points for missing work again.
+
+![Missing](Pictures/omaclasroom4.png)
 
 ---
 
@@ -57,7 +66,6 @@ Your browser will open for Google authorization. After granting access, the refr
 | Open/close panel | Left-click the bar icon |
 | Refresh data | Right-click the bar icon |
 | Switch views | Press `1`, `2`, `3`, or `4` |
-| Switch role | Press `S` or `T` |
 | Refresh | Press `R` |
 | Close panel | Press `Escape` |
 
