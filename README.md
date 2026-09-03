@@ -1,8 +1,10 @@
 # Omaclasroom
 
-**Google Classroom in your Omarchy bar.** Stop alt-tabbing to check assignments.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Platform: Omarchy](https://img.shields.io/badge/Platform-Omarchy-purple?style=for-the-badge)](https://omarchy.org/)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green?style=for-the-badge)](https://www.python.org/)
 
-Built for students using [Chris Titus Tech](https://christitus.com/)'s Omarchy setup.
+**Google Classroom grades and assignments in your Omarchy bar.** Check your grades, track deadlines, and never miss an assignment again.
 
 ![Student View](Pictures/omaclasroom1.png)
 ![Assignments](Pictures/omaclasroom2.png)
@@ -11,14 +13,18 @@ Built for students using [Chris Titus Tech](https://christitus.com/)'s Omarchy s
 
 ---
 
-## Install
+## Quick Start
+
+> **Requires Python 3.10+** and **`libsecret`** for credential storage.
+
+Install the plugin and its dependency:
 
 ```sh
 omarchy pkg add libsecret
 omarchy plugin add https://github.com/tngyema/omaclasroom.git --enable
 ```
 
-Set up Google auth:
+Then authorize with Google:
 
 ```sh
 ~/.config/omarchy/plugins/io.github.omaclasroom/omaclasroom set-token \
@@ -26,65 +32,80 @@ Set up Google auth:
   --client-secret YOUR_CLIENT_SECRET
 ```
 
-Browser opens once. Token saves. Done forever.
+Your browser will open for Google authorization. After granting access, the refresh token is saved permanently — you never need to authorize again.
 
 ---
 
-## What You Get
+## Features
 
-- **Overview** — Grades, due counts, upcoming work
-- **Assignments** — Everything sorted by due date
-- **Courses** — Drill into individual classes
-- **Missing** — Overdue stuff with one-click open
-- **Auto Refresh** — Every 6 hours by default
-- **Keyboard** — `1`-`4` views, `S`/`T` roles, `R` refresh
+| Feature | Description |
+|---------|-------------|
+| **Overview Panel** | Course grades, due counts, and next-up assignments at a glance |
+| **Assignments View** | All upcoming work sorted by due date |
+| **Courses View** | Per-course details and assignment lists |
+| **Missing View** | Overdue assignments with one-click open |
+| **Auto Refresh** | Configurable interval (default: 6 hours) |
+| **OAuth2 Auth** | Secure token flow via local browser redirect |
+| **Keyboard Control** | Full navigation — `1`-`4` views, `S`/`T` roles, `R` refresh |
 
 ---
 
 ## Usage
 
-| Action | How |
-|--------|-----|
-| Open/close | Left-click icon |
-| Refresh | Right-click icon |
-| Switch views | `1` `2` `3` `4` |
-| Refresh | `R` |
-| Close | `Escape` |
+| Action | Method |
+|--------|--------|
+| Open/close panel | Left-click the bar icon |
+| Refresh data | Right-click the bar icon |
+| Switch views | Press `1`, `2`, `3`, or `4` |
+| Switch role | Press `S` or `T` |
+| Refresh | Press `R` |
+| Close panel | Press `Escape` |
 
 ---
 
-## Config
+## Configuration
 
 ```sh
+# Change assignment window to 21 days
 omarchy bar set io.github.omaclasroom days 21 --json
+
+# Change refresh to every 3 hours
 omarchy bar set io.github.omaclasroom refreshIntervalSec 10800 --json
 ```
 
-| Setting | Default | Range |
-|---------|---------|-------|
-| `days` | 14 | 1–60 |
-| `refreshIntervalSec` | 21600 | 300–86400 |
+| Setting | Default | Range | Description |
+|---------|---------|-------|-------------|
+| `days` | 14 | 1–60 | Assignment window in days |
+| `refreshIntervalSec` | 21600 | 300–86400 | Auto-refresh interval |
 
 ---
 
 ## Google Cloud Setup
 
-1. [Google Cloud Console](https://console.cloud.google.com/)
-2. Create/select project
-3. Enable **Google Classroom API**
-4. APIs & Services → Credentials
-5. Create **OAuth 2.0 Client ID** (Desktop app)
-6. Copy Client ID + Secret
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project (or select existing)
+3. Enable the **Google Classroom API**
+4. Go to **APIs & Services → Credentials**
+5. Create an **OAuth 2.0 Client ID** (Desktop app type)
+6. Copy the **Client ID** and **Client Secret**
 
 ---
 
-## How Auth Works
+## Credential Persistence
 
-One-time browser consent → refresh token saved to keyring → silent access token refreshes.
+Omaclasroom uses OAuth2 **refresh tokens** for permanent authentication. You only need to authorize once — the token persists across reboots.
 
-No browser popups after setup. Token persists across reboots.
+### How It Works
 
-**Re-authorize when:** You run `omaclasroom clear-token`, revoke in [Google permissions](https://myaccount.google.com/permissions), or after ~6 months of non-use.
+1. `set-token` opens your browser for a one-time Google consent
+2. A refresh token is saved to your **system keyring** (or `credentials.json` as fallback on systems without `libsecret`)
+3. Every refresh cycle, the stored token silently obtains a new access token — no browser, no interaction required
+
+### When You Need to Re-authorize
+
+- You run `omaclasroom clear-token`
+- You revoke access in [Google Account permissions](https://myaccount.google.com/permissions)
+- Google invalidates the token (rare — typically after 6+ months of non-use)
 
 ---
 
@@ -98,19 +119,25 @@ omarchy plugin remove io.github.omaclasroom
 
 ## Privacy
 
-- HTTPS to Google Classroom API only
-- Credentials in system keyring (file fallback if no `libsecret`)
-- File permissions `0600`
-- No tracking, no logging, no data sent elsewhere
+- Sends authenticated HTTPS requests **only** to Google Classroom API
+- Credentials stored in the **system keyring** when available, with a **file-based fallback** for systems without `libsecret`
+- Credentials file uses `0600` permissions (owner-read-only)
+- No data is collected, logged, or sent elsewhere
 
 ---
 
 ## Teacher Mode
 
-**Coming soon.** Grading views, assignment management, student tracking.
+**Coming soon.** Grading views, assignment management, and student progress tracking are in development.
+
+---
+
+## Support
+
+If you find Omaclasroom helpful, please consider giving it a ⭐️ to show your support!
 
 ---
 
 ## License
 
-[MIT](LICENSE)
+[MIT License](LICENSE)
