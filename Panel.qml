@@ -328,7 +328,7 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "\uf19c"
+    text: "󰋀"
     active: root.errorText !== "" || root.missingCount > 0 || root.urgentCount > 0
     tooltipText: root.errorText !== "" ? "Omaclasroom -- " + root.errorText
       : root.urgentCount > 0 ? "REMINDER: " + root.urgentCount + " assignment(s) due within 1 day!"
@@ -392,7 +392,7 @@ Panel {
               id: hIcon
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
-              text: "\uf19c"
+    text: "󰋀"
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.display
