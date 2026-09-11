@@ -106,8 +106,13 @@ Omaclasroom uses OAuth2 **refresh tokens** for permanent authentication. You onl
 ### How It Works
 
 1. `set-token` opens your browser for a one-time Google consent
-2. A refresh token is saved to your **system keyring** (or `credentials.json` as fallback on systems without `libsecret`)
+2. A refresh token is saved to your **system keyring via Secret Service** (`libsecret`) — no plaintext copy is ever written
 3. Every refresh cycle, the stored token silently obtains a new access token — no browser, no interaction required
+
+> Requires a working Secret Service keyring (e.g. GNOME Keyring). If the
+> keyring is missing, locked, or errors, `set-token` fails closed with an
+> error instead of writing credentials to disk. Set up your keyring first,
+> then retry.
 
 ### When You Need to Re-authorize
 
@@ -128,8 +133,7 @@ omarchy plugin remove io.github.omaclasroom
 ## Privacy
 
 - Sends authenticated HTTPS requests **only** to Google Classroom API
-- Credentials stored in the **system keyring** when available, with a **file-based fallback** for systems without `libsecret`
-- Credentials file uses `0600` permissions (owner-read-only)
+- Credentials stored **only** in the **system keyring (Secret Service)** — fail closed, never plaintext on disk
 - No data is collected, logged, or sent elsewhere
 
 ---

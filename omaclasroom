@@ -78,15 +78,21 @@ def _keyring_lookup(key: str) -> str | None:
 def _keyring_store(key: str, value: str, label: str = "") -> None:
     secret_tool = shutil.which("secret-tool")
     if not secret_tool:
-        raise RuntimeError("secret-tool is required to store credentials; install libsecret")
+        raise RuntimeError(
+            "secret-tool is required to store credentials; install libsecret "
+            "and set up a Secret Service keyring"
+        )
     try:
         subprocess.run(
             [secret_tool, "store", f"--label={label or key}",
              "service", SERVICE, "key", key],
-            input=value + "\n", text=True, check=True,
+            input=value + "\n", text=True, check=True, capture_output=True, timeout=10,
         )
     except (OSError, subprocess.SubprocessError) as error:
-        raise RuntimeError(f"Could not save credential: {error}") from error
+        raise RuntimeError(
+            f"Could not save credential in the system keyring ({error}); "
+            "refusing to write plaintext — unlock your keyring and retry"
+        ) from error
 
 
 def _keyring_clear(key: str) -> None:
@@ -103,8 +109,11 @@ def _keyring_clear(key: str) -> None:
 
 
 def get_credentials() -> dict[str, str] | None:
-    """Retrieve stored OAuth2 credentials from keyring or file."""
-    # Try keyring first
+    """Retrieve stored OAuth2 credentials from the system keyring.
+
+    Fail closed: never reads plaintext files. Returns None when the
+    Secret Service is unavailable, locked, or has no stored credentials.
+    """
     client_id = _keyring_lookup("client_id")
     client_secret = _keyring_lookup("client_secret")
     refresh_token = _keyring_lookup("refresh_token")
@@ -114,62 +123,37 @@ def get_credentials() -> dict[str, str] | None:
             "client_secret": client_secret,
             "refresh_token": refresh_token,
         }
-    # Try file-based credentials
-    creds_file = os.path.join(
-        os.path.dirname(__file__), "credentials.json"
-    )
-    if os.path.exists(creds_file):
-        try:
-            with open(creds_file) as f:
-                data = json.load(f)
-            if data.get("client_id") and data.get("client_secret") and data.get("refresh_token"):
-                return data
-        except (json.JSONDecodeError, KeyError):
-            pass
     return None
 
 
 def save_credentials(client_id: str, client_secret: str, refresh_token: str) -> None:
-    """Store OAuth2 credentials in keyring and file."""
-    keyring_ok = True
+    """Store OAuth2 credentials in the system keyring only.
+
+    Fail closed: raises when Secret Service is unavailable instead of
+    falling back to a plaintext file.
+    """
     for key, value, label in [
         ("client_id", client_id, "Omaclasroom Client ID"),
         ("client_secret", client_secret, "Omaclasroom Client Secret"),
         ("refresh_token", refresh_token, "Omaclasroom Refresh Token"),
     ]:
-        try:
-            _keyring_store(key, value, label)
-        except RuntimeError:
-            keyring_ok = False
-    # Always save to file as fallback
-    creds_file = os.path.join(os.path.dirname(__file__), "credentials.json")
-    try:
-        with open(creds_file, "w") as f:
-            json.dump({
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token,
-            }, f, indent=2)
-        os.chmod(creds_file, 0o600)
-    except OSError:
-        pass
-    if not keyring_ok:
-        print("Note: Could not store in system keyring; saved to credentials.json instead.")
+        _keyring_store(key, value, label)
 
 
 def clear_credentials() -> None:
-    """Remove stored OAuth2 credentials from keyring and file."""
+    """Remove stored OAuth2 credentials from the system keyring."""
     for key in ("client_id", "client_secret", "refresh_token"):
         try:
             _keyring_clear(key)
         except RuntimeError:
             pass
-    creds_file = os.path.join(os.path.dirname(__file__), "credentials.json")
-    if os.path.exists(creds_file):
-        try:
-            os.remove(creds_file)
-        except OSError:
-            pass
+    # One-time cleanup of the legacy plaintext fallback (removed, never read).
+    try:
+        legacy = Path(__file__).with_name("credentials.json")
+        if legacy.exists():
+            legacy.unlink()
+    except OSError:
+        pass
 
 
 def refresh_access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
