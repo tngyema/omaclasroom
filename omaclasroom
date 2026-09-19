@@ -11,6 +11,7 @@ import http.server
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -186,12 +187,12 @@ def refresh_access_token(client_id: str, client_secret: str, refresh_token: str)
 
 
 def sanitize_text(value: Any, fallback: str = "") -> str:
-    text = unescape(str(value if value is not None else fallback))
+    text = unescape(str(value if value is not None else fallback)[:1024])
     text = "".join(
         " " if unicodedata.category(c) in {"Cc", "Cf"} else c
         for c in text
     )
-    return " ".join(text.split()) or fallback
+    return " ".join(text.split())[:256] or fallback
 
 
 def visibility_path() -> Path:
@@ -841,8 +842,35 @@ def print_terminal(data: dict[str, Any]) -> None:
 
 def run_oauth_flow(client_id: str, client_secret: str) -> dict[str, str]:
     """Run a local OAuth2 authorization flow for Google Classroom."""
-    port = 8099
-    redirect_uri = f"http://localhost:{port}"
+    state = secrets.token_urlsafe(32)
+    callback_path = "/oauth/callback"
+    auth_code = None
+
+    class AuthHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            nonlocal auth_code
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            supplied_states = params.get("state", [])
+            valid_state = (len(supplied_states) == 1 and
+                           secrets.compare_digest(supplied_states[0], state))
+            if parsed.path != callback_path or not valid_state:
+                self.send_error(400, "Invalid OAuth callback")
+                return
+            if len(params.get("code", [])) == 1 and params["code"][0]:
+                auth_code = params["code"][0]
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"Authorization successful. You can close this tab.")
+            else:
+                self.send_error(400, "Authorization failed")
+
+        def log_message(self, format, *args):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), AuthHandler)
+    redirect_uri = f"http://127.0.0.1:{server.server_port}{callback_path}"
     scope = " ".join(GOOGLE_CLASSROOM_SCOPES)
 
     auth_params = urlencode({
@@ -852,39 +880,21 @@ def run_oauth_flow(client_id: str, client_secret: str) -> dict[str, str]:
         "scope": scope,
         "access_type": "offline",
         "prompt": "consent",
+        "state": state,
     })
     auth_url = f"{GOOGLE_AUTH_URL}?{auth_params}"
 
-    print(f"Opening browser for Google authorization...")
+    print("Opening browser for Google authorization...")
     print(f"If the browser does not open, visit:\n{auth_url}\n")
     webbrowser.open(auth_url)
 
-    auth_code = None
-
-    class AuthHandler(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
-            nonlocal auth_code
-            parsed = urlparse(self.path)
-            params = parse_qs(parsed.query)
-            if "code" in params:
-                auth_code = params["code"][0]
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html")
-                self.end_headers()
-                self.wfile.write(b"<h1>Authorization successful!</h1><p>You can close this tab.</p>")
-            else:
-                error = params.get("error", ["unknown"])[0]
-                self.send_response(400)
-                self.send_header("Content-Type", "text/html")
-                self.end_headers()
-                self.wfile.write(f"<h1>Authorization failed: {error}</h1>".encode())
-
-        def log_message(self, format, *args):
-            pass
-
-    server = http.server.HTTPServer(("localhost", port), AuthHandler)
-    server.timeout = 120
-    server.handle_request()
+    deadline = time.monotonic() + 120
+    try:
+        while auth_code is None and time.monotonic() < deadline:
+            server.timeout = min(1, max(0, deadline - time.monotonic()))
+            server.handle_request()
+    finally:
+        server.server_close()
 
     if not auth_code:
         raise RuntimeError("Authorization failed or timed out")
@@ -934,7 +944,6 @@ def main() -> int:
     parser.add_argument("--course-name", default="")
     parser.add_argument("--course-section", default="")
     parser.add_argument("--client-id", default="")
-    parser.add_argument("--client-secret", default="")
     parser.add_argument("--course-work-id", default="",
                         help="Assignment ID to submit")
     parser.add_argument("--link-url", default="",
@@ -944,8 +953,11 @@ def main() -> int:
     args, extra_args = parser.parse_known_args()
     try:
         if args.command == "set-token":
+            if extra_args:
+                raise RuntimeError("Unrecognized set-token arguments")
             client_id = args.client_id or input("Google OAuth2 Client ID: ").strip()
-            client_secret = args.client_secret or input("Google OAuth2 Client Secret: ").strip()
+            import getpass
+            client_secret = getpass.getpass("Google OAuth2 Client Secret: ").strip()
             if not client_id or not client_secret:
                 raise RuntimeError("Client ID and Client Secret are required")
             creds = run_oauth_flow(client_id, client_secret)

@@ -35,6 +35,8 @@ Item {
       implicitHeight: Math.max(statusIcon.implicitHeight, titleText.implicitHeight)
 
       Text {
+
+        textFormat: Text.PlainText
         id: statusIcon
         visible: row.locked || (row.showSubmissionStatus && row.submitted)
         anchors.left: parent.left
@@ -47,6 +49,8 @@ Item {
       }
 
       Text {
+
+        textFormat: Text.PlainText
         id: titleText
         anchors.left: statusIcon.visible ? statusIcon.right : parent.left
         anchors.leftMargin: statusIcon.visible ? Style.space(5) : 0
@@ -77,6 +81,8 @@ Item {
         border.width: 1
 
         Text {
+
+          textFormat: Text.PlainText
           id: statusBadgeText
           anchors.centerIn: parent
           text: row.statusText
@@ -102,6 +108,8 @@ Item {
         border.width: 1
 
         Text {
+
+          textFormat: Text.PlainText
           id: submitBtnText
           anchors.centerIn: parent
           text: "\uf00c Submit"
@@ -123,6 +131,8 @@ Item {
     }
 
     Text {
+
+      textFormat: Text.PlainText
       width: parent.width
       text: row.subtitle
       textFormat: Text.PlainText

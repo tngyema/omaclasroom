@@ -23,11 +23,10 @@ Then authorize with Google:
 
 ```sh
 ~/.config/omarchy/plugins/io.github.omaclasroom/omaclasroom set-token \
-  --client-id YOUR_CLIENT_ID \
-  --client-secret YOUR_CLIENT_SECRET
+  --client-id YOUR_CLIENT_ID
 ```
 
-Your browser will open for Google authorization. After granting access, the refresh token is saved permanently — you never need to authorize again.
+Enter the OAuth client secret at the hidden prompt. Your browser will open for Google authorization. After granting access, the refresh token is saved in the system keyring.
 
 ---
 

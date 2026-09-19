@@ -389,6 +389,7 @@ Panel {
             width: parent.width
             implicitHeight: Math.max(hIcon.implicitHeight, hCol.implicitHeight)
             Text {
+              textFormat: Text.PlainText
               id: hIcon
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
@@ -408,6 +409,7 @@ Panel {
                 width: parent.width
                 implicitHeight: Math.max(hTitle.implicitHeight, roleCh.implicitHeight)
                 Text {
+                  textFormat: Text.PlainText
                   id: hTitle
                   anchors.left: parent.left
                   anchors.verticalCenter: parent.verticalCenter
@@ -423,6 +425,7 @@ Panel {
                   anchors.right: parent.right
                   anchors.verticalCenter: parent.verticalCenter
                   Text {
+                    textFormat: Text.PlainText
                     text: root.teaching ? "TEACHING" : "STUDENT"
                     color: rArea.containsMouse ? root.urgent : root.dim
                     font.family: root.fontFamily
@@ -440,6 +443,7 @@ Panel {
                 }
               }
               Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 text: root.fetchedLabel() + (root.loading ? " | refreshing" : "") + " | " + root.dueSoonCount + " due | " + root.missingCount + " missing | " + root.upcomingCount + " upcoming | " + root.submittedCount + " done | " + root.getTimezone()
                 color: root.dim
@@ -479,6 +483,7 @@ Panel {
 
           // ERRORS
           Text {
+            textFormat: Text.PlainText
             visible: root.errorText !== ""
             width: parent.width
             text: root.errorText
@@ -488,6 +493,7 @@ Panel {
             wrapMode: Text.WordWrap
           }
           Text {
+            textFormat: Text.PlainText
             visible: root.errorText === "" && !root.loading && root.courses.length === 0
             width: parent.width
             text: "No courses found."
@@ -516,6 +522,7 @@ Panel {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 4
                 Text {
+                  textFormat: Text.PlainText
                   text: "REMINDER"
                   color: root.foreground
                   font.family: root.fontFamily
@@ -538,6 +545,7 @@ Panel {
                     return items
                   }
                   Text {
+                    textFormat: Text.PlainText
                     text: modelData.name + " — " + root.timeLeft(modelData.due_at) + " left"
                     color: root.dim
                     font.family: root.fontFamily
@@ -557,6 +565,8 @@ Panel {
             spacing: Style.space(8)
 
             Text {
+
+              textFormat: Text.PlainText
               text: "SUMMARY"
               color: root.dim
               font.family: root.fontFamily
@@ -569,34 +579,36 @@ Panel {
               spacing: Style.space(16)
               Column {
                 spacing: 2
-                Text { text: String(root.totalCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Text { text: "Total"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                Text { textFormat: Text.PlainText; text: String(root.totalCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { textFormat: Text.PlainText; text: "Total"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
               Column {
                 spacing: 2
-                Text { text: String(root.dueSoonCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Text { text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                Text { textFormat: Text.PlainText; text: String(root.dueSoonCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { textFormat: Text.PlainText; text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
               Column {
                 spacing: 2
-                Text { text: String(root.upcomingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Text { text: "Upcoming"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                Text { textFormat: Text.PlainText; text: String(root.upcomingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { textFormat: Text.PlainText; text: "Upcoming"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
               Column {
                 spacing: 2
-                Text { text: String(root.missingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Text { text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                Text { textFormat: Text.PlainText; text: String(root.missingCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { textFormat: Text.PlainText; text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
               Column {
                 spacing: 2
-                Text { text: String(root.submittedCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
-                Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                Text { textFormat: Text.PlainText; text: String(root.submittedCount); color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.title; font.bold: true }
+                Text { textFormat: Text.PlainText; text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               }
             }
 
             Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12) }
 
             Text {
+
+              textFormat: Text.PlainText
               text: "COURSES"
               color: root.dim
               font.family: root.fontFamily
@@ -615,6 +627,7 @@ Panel {
                   width: parent.width
                   implicitHeight: Math.max(cName.implicitHeight, cGrade.implicitHeight)
                   Text {
+                    textFormat: Text.PlainText
                     id: cName
                     anchors.left: parent.left
                     anchors.right: cGrade.left
@@ -634,6 +647,7 @@ Panel {
                     }
                   }
                   Text {
+                    textFormat: Text.PlainText
                     id: cGrade
                     anchors.right: parent.right
                     text: root.grade(modelData)
@@ -648,6 +662,8 @@ Panel {
             }
 
             Text {
+
+              textFormat: Text.PlainText
               visible: !!root.nextAssignment
               width: parent.width
               text: root.nextAssignment ? "Next: " + dueLabel(root.nextAssignment.due_at) + " — " + root.nextAssignment.name : ""
@@ -666,6 +682,7 @@ Panel {
 
             // DUE SOON
             Text {
+              textFormat: Text.PlainText
               text: "DUE SOON (" + root.dueSoonCount + ")"
               color: root.dim
               font.family: root.fontFamily
@@ -674,6 +691,7 @@ Panel {
               font.letterSpacing: 1.2
             }
             Text {
+              textFormat: Text.PlainText
               visible: root.dueSoonCount === 0
               width: parent.width
               text: "Nothing due soon."
@@ -694,8 +712,8 @@ Panel {
                     anchors.right: dsOpen.visible ? dsOpen.left : parent.right
                     anchors.rightMargin: dsOpen.visible ? 8 : 0
                     spacing: 2
-                    Text { id: dsName; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
-                    Text { id: dsDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                    Text { textFormat: Text.PlainText; id: dsName; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { textFormat: Text.PlainText; id: dsDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
                   Rectangle {
                     id: dsOpen
@@ -708,7 +726,7 @@ Panel {
                     color: dsOpenArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
                     border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
                     border.width: 1
-                    Text { id: dsOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    Text { textFormat: Text.PlainText; id: dsOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: dsOpenArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openLink(modelData.alternateLink) }
                   }
                 }
@@ -718,6 +736,7 @@ Panel {
 
             // UPCOMING
             Text {
+              textFormat: Text.PlainText
               text: "UPCOMING (" + root.upcomingCount + ")"
               color: root.dim
               font.family: root.fontFamily
@@ -739,8 +758,8 @@ Panel {
                     anchors.right: upOpen.visible ? upOpen.left : parent.right
                     anchors.rightMargin: upOpen.visible ? 8 : 0
                     spacing: 2
-                    Text { id: upName; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
-                    Text { id: upDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                    Text { textFormat: Text.PlainText; id: upName; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { textFormat: Text.PlainText; id: upDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
                   Rectangle {
                     id: upOpen
@@ -753,7 +772,7 @@ Panel {
                     color: upOpenArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
                     border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
                     border.width: 1
-                    Text { id: upOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    Text { textFormat: Text.PlainText; id: upOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: upOpenArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openLink(modelData.alternateLink) }
                   }
                 }
@@ -763,6 +782,7 @@ Panel {
 
             // TURNED IN
             Text {
+              textFormat: Text.PlainText
               visible: root.submittedCount > 0
               text: "TURNED IN (" + root.submittedCount + ")"
               color: root.dim
@@ -785,8 +805,8 @@ Panel {
                     anchors.right: cmOpen.visible ? cmOpen.left : parent.right
                     anchors.rightMargin: cmOpen.visible ? 8 : 0
                     spacing: 2
-                    Text { id: cmName; width: parent.width; text: modelData.name; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; maximumLineCount: 1 }
-                    Text { id: cmDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: Qt.darker(root.dim, 1.3); font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                    Text { textFormat: Text.PlainText; id: cmName; width: parent.width; text: modelData.name; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.body; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { textFormat: Text.PlainText; id: cmDue; width: parent.width; text: dueLabel(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: Qt.darker(root.dim, 1.3); font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
                   Rectangle {
                     id: cmOpen
@@ -799,7 +819,7 @@ Panel {
                     color: cmOpenArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
                     border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
                     border.width: 1
-                    Text { id: cmOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    Text { textFormat: Text.PlainText; id: cmOpenTxt; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: cmOpenArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openLink(modelData.alternateLink) }
                   }
                 }
@@ -815,6 +835,8 @@ Panel {
             spacing: Style.space(8)
 
             Text {
+
+              textFormat: Text.PlainText
               text: "MISSING (" + root.missingCount + ")"
               color: root.urgent
               font.family: root.fontFamily
@@ -823,6 +845,7 @@ Panel {
               font.letterSpacing: 1.2
             }
             Text {
+              textFormat: Text.PlainText
               visible: root.missingCount === 0
               width: parent.width
               text: "Nothing missing. Good job!"
@@ -845,8 +868,8 @@ Panel {
                     anchors.right: submitBtn2.left
                     anchors.rightMargin: 8
                     spacing: 2
-                    Text { id: mTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
-                    Text { id: mSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                    Text { textFormat: Text.PlainText; id: mTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { textFormat: Text.PlainText; id: mSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at) + " | " + (modelData.course_section || modelData.course_name); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
                   Rectangle {
                     id: submitBtn2
@@ -859,7 +882,7 @@ Panel {
                     color: sArea2.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
                     border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
                     border.width: 1
-                    Text { id: sText2; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    Text { textFormat: Text.PlainText; id: sText2; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: sArea2; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.submitAssignment(modelData) }
                   }
                 }
@@ -878,6 +901,7 @@ Panel {
               width: parent.width
               implicitHeight: cPos.implicitHeight
               Text {
+                textFormat: Text.PlainText
                 id: cPos
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
@@ -894,11 +918,13 @@ Panel {
               width: parent.width
               implicitHeight: Math.max(pCourse.implicitHeight, cLabel.implicitHeight, nCourse.implicitHeight)
               PanelActionButton { id: pCourse; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; iconText: "\uf053"; enabled: root.courses.length > 1; foreground: root.foreground; fontFamily: root.fontFamily; onClicked: root.selectCourseOffset(-1) }
-              Text { id: cLabel; anchors.left: pCourse.right; anchors.right: nCourse.left; anchors.leftMargin: 8; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; text: root.selectedCourse ? root.courseLabel(root.selectedCourse, root.selectedCourseIndex) : ""; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.subtitle; font.bold: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight }
+              Text { textFormat: Text.PlainText; id: cLabel; anchors.left: pCourse.right; anchors.right: nCourse.left; anchors.leftMargin: 8; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; text: root.selectedCourse ? root.courseLabel(root.selectedCourse, root.selectedCourseIndex) : ""; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.subtitle; font.bold: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight }
               PanelActionButton { id: nCourse; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; iconText: "\uf054"; enabled: root.courses.length > 1; foreground: root.foreground; fontFamily: root.fontFamily; onClicked: root.selectCourseOffset(1) }
             }
 
             Text {
+
+              textFormat: Text.PlainText
               visible: !!root.selectedCourse
               width: parent.width
               text: root.selectedCourse ? root.selectedCourse.name : ""
@@ -928,16 +954,16 @@ Panel {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: Style.space(16)
                 Column { spacing: 2
-                  Text { text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "due_soon")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                  Text { text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                  Text { textFormat: Text.PlainText; text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "due_soon")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text { textFormat: Text.PlainText; text: "Due soon"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
                 }
                 Column { spacing: 2
-                  Text { text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "missing")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                  Text { text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                  Text { textFormat: Text.PlainText; text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "missing")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text { textFormat: Text.PlainText; text: "Missing"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
                 }
                 Column { spacing: 2
-                  Text { text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "submitted")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
-                  Text { text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+                  Text { textFormat: Text.PlainText; text: root.selectedCourse ? String(root.countByStatusForCourse(root.selectedCourse.id, "submitted")) : "0"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true }
+                  Text { textFormat: Text.PlainText; text: "Done"; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
                 }
               }
             }
@@ -959,8 +985,8 @@ Panel {
                     anchors.right: coSubmit.left
                     anchors.rightMargin: 8
                     spacing: 2
-                    Text { id: coTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
-                    Text { id: coSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                    Text { textFormat: Text.PlainText; id: coTitle; width: parent.width; text: modelData.name; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideRight; maximumLineCount: 1 }
+                    Text { textFormat: Text.PlainText; id: coSub; width: parent.width; text: dueLabel(modelData.due_at) + " | " + timeLeft(modelData.due_at); color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
                   }
                   Rectangle {
                     id: coSubmit
@@ -973,10 +999,11 @@ Panel {
                     color: coSArea.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15) : "transparent"
                     border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
                     border.width: 1
-                    Text { id: coSText; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+                    Text { textFormat: Text.PlainText; id: coSText; anchors.centerIn: parent; text: "Open"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
                     MouseArea { id: coSArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.submitAssignment(modelData) }
                   }
                   Text {
+                    textFormat: Text.PlainText
                     visible: root.getAssignmentStatus(modelData) === "submitted"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
@@ -993,6 +1020,7 @@ Panel {
 
           Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.3) }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: "R refresh | 1-4 switch views | S/T switch role"
             color: root.dim
